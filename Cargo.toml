@@ -1,0 +1,42 @@
+[package]
+name        = "axecs"
+version     = "0.1.0"
+authors     = [ "Totobird Creations <https://github.com/Totobird-Creations>" ]
+description = "An asynchronous ECS library with ease-of-use in mind, inspired by Bevy ECS"
+license     = "LGPL-3.0"
+
+readme     = "README.md"
+repository = "https://github.com/Totobird-Creations/axecs"
+
+keywords   = [ "ecs", "async", "gamedev" ]
+categories = [ "asynchronous", "game-development" ]
+
+edition = "2024"
+
+[features]
+default          = [ "derive" ]
+keep_debug_names = [ ]
+derive           = [ "axecs-macro" ]
+
+
+[workspace]
+members = [ "axecs-macro" ]
+
+
+[dependencies.axecs-macro]
+path     = "axecs-macro"
+optional = true
+
+
+[dev-dependencies.async-std]
+version  = "1.13"
+features = [ "attributes" ]
+
+[dev-dependencies.tokio]
+version  = "1.43"
+features = [ "full" ]
+
+
+[lints.rust]
+unused_parens     = "allow"
+internal_features = "allow"

@@ -1,0 +1,28 @@
+[package]
+name        = "axecs-macro"
+version     = "0.1.0"
+authors     = [ "Totobird Creations <https://github.com/Totobird-Creations>" ]
+description = "An asynchronous ECS library with ease-of-use in mind, inspired by Bevy ECS (proc-macros)"
+license     = "LGPL-3.0"
+
+homepage   = "https://crates.io/crates/axecs"
+repository = "https://github.com/Totobird-Creations/axecs"
+
+edition     = "2024"
+
+workspace = "../"
+
+[lib]
+proc-macro = true
+
+
+[dependencies.syn]
+version = "2.0"
+
+[dependencies.quote]
+version = "1.0"
+
+
+[lints.rust]
+unused_parens     = "allow"
+internal_features = "allow"
