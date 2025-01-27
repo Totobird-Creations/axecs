@@ -1,6 +1,35 @@
 //! [`Component`]s of data which can be attached to entities.
 //!
-//! TODO: Proper explanation
+//! A component is a piece of data that can be attached to an entity.
+//! They are normal Rust structs.
+//! ```rust
+//! use axecs::prelude::*;
+//!
+//! #[derive(Component)]
+//! struct Position {x : f32, y : f32, z : f32 }
+//! ```
+//!
+//! An entity may have any number of components attached, but only
+//! one of each type.
+//! ```rust should_panic
+//! use axecs::prelude::*;
+//! # use async_std::main;
+//!
+//! #[derive(Component)]
+//! struct Position { x : f32, y : f32, z : f32 }
+//!
+//! #[main]
+//! async fn main() {
+//!     let world = World::new();
+//!
+//!     // Bundle violates the archetype rules:
+//!     //   Already included Component<Position>
+//!     world.spawn((
+//!         Position { x : 0.0, y : 0.0, z : 0.0 },
+//!         Position { x : 1.0, y : 2.0, z : 3.0 }
+//!     )).await;
+//! }
+//! ```
 
 
 mod bundle;

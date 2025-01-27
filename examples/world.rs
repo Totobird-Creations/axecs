@@ -44,7 +44,7 @@ async fn main() {
         println!("B {:?} {:?} {:?} {:?}", entity, two.message, two.message, one.value);
         one.value += 256
     }
-    for (entity, one) in &mut world.query_mut::<(Entities<(Entity, &MyComponentOne)>)>().acquire().await {
+    for (entity, one) in &mut world.query::<(Entities<(Entity, &MyComponentOne)>)>().acquire().await {
         println!("C {:?} {:?}", entity, one.value);
     }
 

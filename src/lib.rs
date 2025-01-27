@@ -18,10 +18,14 @@
 
 
 pub mod world;
+// TODO: pub mod resource;
+
 pub mod archetype;
 pub mod entity;
 pub mod component;
+
 pub mod query;
+// TODO: pub mod system;
 
 pub mod util;
 
