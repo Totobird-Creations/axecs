@@ -27,7 +27,8 @@ mod column;
 pub use column::*;
 
 
-use crate::component::{ Component, ComponentBundle };
+use crate::component::Component;
+use crate::component::bundle::ComponentBundle;
 use crate::component::query::{ ComponentQuery, ReadOnlyComponentQuery };
 #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
 use crate::util::unqualified::UnqualifiedTypeName;
@@ -44,7 +45,7 @@ use alloc::vec::Vec;
 /// a safe API, but they can be used directly as well.
 /// ```rust
 /// use axecs::prelude::*;
-/// use axecs::archetype::Archetype;
+/// use axecs::component::archetype::Archetype;
 /// use core::any::type_name;
 ///
 /// #[derive(Component)]
@@ -256,7 +257,7 @@ impl Archetype {
     /// # Safety
     /// The caller is responsible for ensuring that the given bundle:
     /// - contains the exact [`Component`]s in this archetype. No more, no less.
-    /// - does not violate the archetype rules. See [`BundleValidator`](crate::component::BundleValidator).
+    /// - does not violate the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
     pub unsafe fn spawn_unchecked<C : ComponentBundle>(&mut self, bundle : C) -> usize {
         let row = if let Some(row) = self.unoccupied_rows.pop() {
             // SAFETY: `row` is in `free_rows`, meaning it was previously dropped and is safe to overwrite.
@@ -294,7 +295,7 @@ impl Archetype {
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ReadOnlyComponentQuery`]:
-    /// - does not violate the archetype rules. See [`BundleValidator`](crate::component::BundleValidator).
+    /// - does not violate the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
     /// - is a **subset** of the components stored in this archetype.
     pub unsafe fn query_unchecked<Q : ReadOnlyComponentQuery>(&self) -> impl Iterator<Item = Q::Item<'_>> {
         // SAFETY: The caller is responsible for upholding the safety guarantees.
@@ -305,7 +306,7 @@ impl Archetype {
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ComponentQuery`]:
-    /// - does not violate the archetype rules. See [`BundleValidator`](crate::component::BundleValidator).
+    /// - does not violate the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
     /// - is a **subset** of the components stored in this archetype.
     pub unsafe fn query_unchecked_mut<Q : ComponentQuery>(&mut self) -> impl Iterator<Item = Q::ItemMut<'_>> {
         // SAFETY: The caller is responsible for upholding the safety guarantees.

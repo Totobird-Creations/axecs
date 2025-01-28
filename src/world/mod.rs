@@ -5,15 +5,19 @@ mod commands;
 pub use commands::*;
 
 
-use crate::archetype::ArchetypeStorage;
+use crate::resource::{ Resource, ResourceStorage, ResourceCellReadGuard, ResourceCellWriteGuard };
 use crate::entity::Entity;
-use crate::component::ComponentBundle;
+use crate::component::bundle::ComponentBundle;
+use crate::component::archetype::ArchetypeStorage;
 use crate::query::{ Query, ReadOnlyQuery, PersistentQueryState };
 use crate::system::{ IntoSystem, IntoReadOnlySystem, ReadOnlySystem, PersistentSystemState };
 
 
 /// TODO: Doc comments
 pub struct World {
+
+    /// TODO: Doc comments
+    resources : ResourceStorage,
 
     /// TODO: Doc comments
     archetypes : ArchetypeStorage
@@ -35,8 +39,40 @@ impl World {
     /// TODO: Doc comments
     #[inline]
     pub fn new() -> Self { Self {
+        resources  : ResourceStorage::new(),
         archetypes : ArchetypeStorage::new()
     } }
+
+
+    /// TODO: Doc comments
+    pub async fn insert_resource<R : Resource + 'static>(&self, resource : R) {
+        self.resources.insert::<R>(resource).await
+    }
+
+    /// TODO: Doc comments
+    pub async fn replace_resource<R : Resource + 'static>(&self, resource : R) -> Option<R> {
+        self.resources.replace::<R>(resource).await
+    }
+
+    /// TODO: Doc comments
+    pub async fn remove_resource<R : Resource + 'static>(&self) {
+        self.resources.remove::<R>().await
+    }
+
+    /// TODO: Doc comments
+    pub async fn take_resource<R : Resource + 'static>(&self) -> Option<R> {
+        self.resources.take::<R>().await
+    }
+
+    /// TODO: Doc comments
+    pub async fn get_resource_ref<R : Resource + 'static>(&self) -> Option<ResourceCellReadGuard<'_, R>> {
+        self.resources.get_ref::<R>().await
+    }
+
+    /// TODO: Doc comments
+    pub async fn get_resource_mut<R : Resource + 'static>(&self) -> Option<ResourceCellWriteGuard<'_, R>> {
+        self.resources.get_mut::<R>().await
+    }
 
 
     /// TODO: Doc comments

@@ -36,7 +36,7 @@ pub unsafe trait Query : Sized {
     /// # Safety
     /// The caller is responsible for ensuring that:
     /// - the query does not violate any borrow checker or archetype rules.
-    ///   See [`QueryValidator`] and [`BundleValidator`](crate::component::BundleValidator).
+    ///   See [`QueryValidator`] and [`BundleValidator`](crate::component::bundle::BundleValidator).
     /// - `world` must be the same [`World`] that was used to initialise `state` in [`Query::init_state`].
     unsafe fn acquire<'world, 'state>(world : &'world World, state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>>;
 

@@ -4,7 +4,7 @@
 mod impls;
 
 
-use crate::archetype::Archetype;
+use crate::component::archetype::Archetype;
 use crate::query::{ QueryAcquireResult, QueryValidator };
 use core::any::TypeId;
 

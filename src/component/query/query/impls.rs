@@ -1,10 +1,10 @@
 //! Implementations of [`ComponentQuery`] and [`ReadOnlyComponentQuery`] on foreign types.
 
 
-use crate::archetype::Archetype;
 use crate::entity::Entity;
 use crate::component::{ self, Component };
 use crate::component::query::{ ComponentQuery, ReadOnlyComponentQuery };
+use crate::component::archetype::Archetype;
 use crate::query::{ QueryAcquireResult, QueryValidator };
 use crate::util::variadic::variadic_no_unit;
 use crate::util::multizip::multizip;

@@ -2,8 +2,8 @@
 
 
 use crate::world::World;
-use crate::archetype::{ ArchetypeStorage, Archetype };
 use crate::component::query::{ ComponentQuery, ReadOnlyComponentQuery, ComponentFilter, True };
+use crate::component::archetype::{ Archetype, ArchetypeStorage };
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryValidator };
 use crate::util::rwlock::RwLockWriteGuard;
 use core::task::Poll;
@@ -27,9 +27,9 @@ impl<Q : ComponentQuery, F : ComponentFilter> Entities<'_, Q, F> {
     /// TODO: Doc comments
     ///
     /// # Safety
-    /// The caller is responsible for ensuring that `Q` follows the archetype rules. See [`BundleValidator`](crate::component::BundleValidator).
+    /// The caller is responsible for ensuring that `Q` follows the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
     pub(crate) unsafe fn acquire_archetypes_unchecked<'l>(archetypes : &'l ArchetypeStorage) -> Poll<Entities<'l, Q, F>> {
-        match (archetypes.try_read_inner()) {
+        match (archetypes.try_read_raw()) {
             Poll::Ready(inner) => {
                 match (inner.archetype_components()
                     .filter_map(|(components, archetype_id)| {

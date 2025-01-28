@@ -25,9 +25,8 @@ extern crate alloc;
 // TODO: pub mod scheduler;
 
 pub mod world;
-// TODO: pub mod resource;
+pub mod resource;
 
-pub mod archetype;
 pub mod entity;
 pub mod component;
 
@@ -42,6 +41,23 @@ pub mod prelude {
 
     #[doc(inline)]
     pub use crate::world::World;
+
+    /// Implements [`Resource`](crate::resource::Resource) on an item.
+    ///
+    /// #### Examples
+    /// ```rust
+    /// use axecs::prelude::*;
+    ///
+    /// #[derive(Resource)]
+    /// struct ClientConfig {
+    ///     sensitivity : f32,
+    ///     brightness  : f32,
+    ///     language    : String
+    /// }
+    /// ```
+    #[cfg(feature = "derive")]
+    #[doc(cfg(feature = "derive"))]
+    pub use axecs_macro::Resource;
 
     #[doc(inline)]
     pub use crate::entity::{ Entity, Entities };

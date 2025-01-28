@@ -32,8 +32,9 @@
 //! ```
 
 
-mod bundle;
-pub use bundle::*;
+pub mod archetype;
+
+pub mod bundle;
 
 pub mod query;
 

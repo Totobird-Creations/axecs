@@ -32,9 +32,9 @@ use core::marker::PhantomData;
 /// ```
 pub trait ComponentFilter {
 
-    /// Returns `true` if this filter matches the given [`Archetype`](crate::archetype::Archetype).
+    /// Returns `true` if this filter matches the given [`Archetype`](crate::component::archetype::Archetype).
     ///
-    /// The [`TypeId`]s of the [`Component`]s stored by the [`Archetype`](crate::archetype::Archetype) are given.
+    /// The [`TypeId`]s of the [`Component`]s stored by the [`Archetype`](crate::component::archetype::Archetype) are given.
     fn archetype_matches(column_types : &[TypeId]) -> bool;
 
 }
@@ -357,13 +357,13 @@ impl<F : ComponentFilterGroup> ComponentFilter for Xnor<F> {
 /// A group of [`ComponentFilter`]s.
 pub unsafe trait ComponentFilterGroup {
 
-    /// Returns `true` if all of the filters in this group match the given [`Archetype`](crate::archetype::Archetype).
+    /// Returns `true` if all of the filters in this group match the given [`Archetype`](crate::component::archetype::Archetype).
     fn archetype_matches_all(column_types : &[TypeId]) -> bool;
 
-    /// Returns `true` if any of the filters in this group match the given [`Archetype`](crate::archetype::Archetype).
+    /// Returns `true` if any of the filters in this group match the given [`Archetype`](crate::component::archetype::Archetype).
     fn archetype_matches_any(column_types : &[TypeId]) -> bool;
 
-    /// Returns `true` if exactly one of the filters in this group match the given [`Archetype`](crate::archetype::Archetype).
+    /// Returns `true` if exactly one of the filters in this group match the given [`Archetype`](crate::component::archetype::Archetype).
     fn archetype_matches_one(column_types : &[TypeId]) -> bool;
 
 }

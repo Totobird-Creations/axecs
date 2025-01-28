@@ -43,15 +43,15 @@ use core::fmt;
 #[derive(Clone, Copy)]
 pub struct Entity {
 
-    /// The ID of the [`Archetype`](crate::archetype::Archetype) that this [`Entity`] belongs to.
+    /// The ID of the [`Archetype`](crate::component::archetype::Archetype) that this [`Entity`] belongs to.
     archetype_id   : usize,
 
-    /// The name of the [`Archetype`](crate::archetype::Archetype) that this [`Entity`] belongs to.
+    /// The name of the [`Archetype`](crate::component::archetype::Archetype) that this [`Entity`] belongs to.
     #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
     #[doc(cfg(feature = "keep_debug_names"))]
     archetype_name : &'static str,
 
-    /// The index of the [`Archetype`](crate::archetype::Archetype) row that this [`Entity`] is in.
+    /// The index of the [`Archetype`](crate::component::archetype::Archetype) row that this [`Entity`] is in.
     archetype_row  : usize,
 
     // TODO: Generational indices, for handling entities being despawned.
@@ -81,19 +81,19 @@ impl Entity {
         core::hint::unreachable_unchecked()
     }
 
-    /// Returns the ID of the [`Archetype`](crate::archetype::Archetype) that this [`Entity`] belongs to.
+    /// Returns the ID of the [`Archetype`](crate::component::archetype::Archetype) that this [`Entity`] belongs to.
     pub fn archetype_id(&self) -> usize {
         self.archetype_id
     }
 
-    /// Returns the name of the [`Archetype`](crate::archetype::Archetype) that this [`Entity`] belongs to.
+    /// Returns the name of the [`Archetype`](crate::component::archetype::Archetype) that this [`Entity`] belongs to.
     #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
     #[doc(cfg(feature = "keep_debug_names"))]
     pub fn archetype_name(&self) -> &'static str {
         self.archetype_name
     }
 
-    /// Returns the index of the [`Archetype`](crate::archetype::Archetype) row that this [`Entity`] is in.
+    /// Returns the index of the [`Archetype`](crate::component::archetype::Archetype) row that this [`Entity`] is in.
     pub fn archetype_row(&self) -> usize {
         self.archetype_row
     }

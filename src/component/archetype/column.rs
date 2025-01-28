@@ -1,4 +1,4 @@
-//! A single column in an [`Archetype`](crate::archetype::Archetype), and its cells.
+//! A single column in an [`Archetype`](crate::component::archetype::Archetype), and its cells.
 
 
 use crate::component::{ Component, ComponentTypeInfo };
@@ -9,7 +9,7 @@ use alloc::alloc::{ alloc, dealloc, handle_alloc_error };
 use alloc::vec::Vec;
 
 
-/// A single column of an [`Archetype`](crate::archetype::Archetype), storing a single [`Component`] type.
+/// A single column of an [`Archetype`](crate::component::archetype::Archetype), storing a single [`Component`] type.
 pub struct ArchetypeColumn {
 
     /// The [`ComponentTypeInfo`] of the [`Component`] type stored in this column.
@@ -163,7 +163,7 @@ impl ArchetypeColumn {
 }
 
 
-/// A single cell in an [`Archetype`](crate::archetype::Archetype).
+/// A single cell in an [`Archetype`](crate::component::archetype::Archetype).
 pub struct ArchetypeCell {
 
     /// A pointer to the contained value.
@@ -186,9 +186,10 @@ impl ArchetypeCell {
         if (data_ptr.is_null()) {
             handle_alloc_error(layout)
         }
+        // SAFETY: An alloc error was emitted above if `data_ptr` `is_null`.
         unsafe{ data_ptr.cast::<C>().write(component); }
         Self {
-            // SAFETY: An alloc error was emitted above, if `data_ptr` was `is_null`.
+            // SAFETY: An alloc error was emitted above if `data_ptr` `is_null`.
             data_ptr : unsafe{ NonNull::new_unchecked(data_ptr) }
         }
     }
@@ -258,9 +259,7 @@ impl ArchetypeCell {
     /// After the operation, consider this cell **unoccupied**.
     ///
     /// # Safety
-    /// The caller is responsible for ensuring that
-    /// - the cell **is occupied**.
-    /// - `C` is the type stored in this cell.
+    /// The caller is responsible for ensuring that the cell **is occupied**.
     pub unsafe fn drop(&mut self, destructor : unsafe fn(NonNull<u8>) -> ()) {
         // SAFETY: The caller is responsible for upholding the safety guarantees.
         unsafe{ destructor(self.data_ptr); }

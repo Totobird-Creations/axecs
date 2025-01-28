@@ -1,4 +1,4 @@
-//! Validator for [`ComponentBundle`](crate::component::ComponentBundle)s.
+//! Validator for [`ComponentBundle`](crate::component::bundle::ComponentBundle)s.
 
 
 #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
@@ -11,10 +11,10 @@ use core::cmp::Ordering;
 use alloc::collections::BTreeSet;
 
 
-/// A container that stores the types included in a [`ComponentBundle`](crate::component::ComponentBundle).
+/// A container that stores the types included in a [`ComponentBundle`](crate::component::bundle::ComponentBundle).
 pub struct BundleValidator {
 
-    /// The [`Component`](crate::component::Component) types that the [`ComponentBundle`](crate::component::ComponentBundle) contains, how they are contained, and whether they conflict.
+    /// The [`Component`](crate::component::Component) types that the [`ComponentBundle`](crate::component::bundle::ComponentBundle) contains, how they are contained, and whether they conflict.
     entries : BTreeSet<BundleValidatorEntry>
 
 }
@@ -55,10 +55,10 @@ impl Ord for BundleValidatorEntry {
 #[derive(Clone, Copy)]
 enum BundleValidatorEntryState {
 
-    /// The [`ComponentBundle`](crate::component::ComponentBundle) contains the [`Component`](crate::component::Component) type.
+    /// The [`ComponentBundle`](crate::component::bundle::ComponentBundle) contains the [`Component`](crate::component::Component) type.
     Included,
 
-    /// The [`ComponentBundle`](crate::component::ComponentBundle) contains the [`Component`](crate::component::Component) type more than once.
+    /// The [`ComponentBundle`](crate::component::bundle::ComponentBundle) contains the [`Component`](crate::component::Component) type more than once.
     IncludedError
 
 }
@@ -68,7 +68,7 @@ impl BundleValidator {
 
     /// Creates an empty [`BundleValidator`].
     ///
-    /// No values are requested by the [`ComponentBundle`](crate::component::ComponentBundle).
+    /// No values are requested by the [`ComponentBundle`](crate::component::bundle::ComponentBundle).
     pub fn empty() -> Self { Self {
         entries : BTreeSet::new()
     } }
@@ -86,7 +86,7 @@ impl BundleValidator {
 
     /// Creates a [`BundleValidator`] with a single entry.
     ///
-    /// The [`ComponentBundle`](crate::component::ComponentBundle) requests a value of type `T`.
+    /// The [`ComponentBundle`](crate::component::bundle::ComponentBundle) requests a value of type `T`.
     pub fn of_included<T : 'static>() -> Self {
         Self::of::<T>(BundleValidatorEntryState::Included
     ) }

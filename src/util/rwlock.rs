@@ -71,6 +71,23 @@ impl<T> Deref for RwLock<T> {
     }
 }
 
+impl<T> RwLock<T> {
+
+    /// TODO: Doc comments
+    pub fn into_inner(self) -> PendingRwLockOwn<T> {
+        PendingRwLockOwn { lock : Some(self.inner) }
+    }
+
+    /// TODO: Doc comments
+    pub fn try_into_inner(self) -> Poll<T> {
+        self.inner.state.compare_exchange(0, u32::MAX, Ordering::Acquire, Ordering::Relaxed).is_ok()
+            // SAFETY: TODO
+            .then(|| unsafe{ Arc::into_inner(self.inner).unwrap_unchecked() }.value.into_inner() )
+            .map_or(Poll::Pending, |out| Poll::Ready(out))
+    }
+
+}
+
 impl<T> RwLockInner<T> {
 
     /// TODO: Doc comments
@@ -298,5 +315,37 @@ impl<T> Drop for RwLockWriteGuard<T> {
         let _ = self.lock.state.store(0, Ordering::Release);
         // SAFETY: TODO
         unsafe{ ManuallyDrop::drop(&mut self.lock); }
+    }
+}
+
+
+
+/// TODO: Doc comments
+pub struct PendingRwLockOwn<T> {
+
+    /// TODO: Doc comments
+    lock : Option<Arc<RwLockInner<T>>>
+
+}
+
+impl<T> Unpin for PendingRwLockOwn<T> { }
+
+impl<T> PendingRwLockOwn<T> {
+
+    /// TODO: Doc comments
+    pub fn try_into_inner(&mut self) -> Poll<T> {
+        self.lock.as_ref().unwrap().state.compare_exchange(1, u32::MAX, Ordering::Acquire, Ordering::Relaxed).is_ok()
+            // SAFETY: TODO
+            .then(|| unsafe{ Arc::into_inner(self.lock.take().unwrap_unchecked()).unwrap_unchecked() }.value.into_inner() )
+            .map_or(Poll::Pending, |out| Poll::Ready(out))
+    }
+
+}
+
+impl<T> Future for PendingRwLockOwn<T> {
+    type Output = T;
+
+    fn poll(mut self : Pin<&mut Self>, _ctx : &mut Context<'_>) -> Poll<Self::Output> {
+        self.try_into_inner()
     }
 }

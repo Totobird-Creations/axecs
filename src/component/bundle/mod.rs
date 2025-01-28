@@ -1,12 +1,41 @@
 //! Bundles of [`Component`]s.
+//!
+//! #### Examples
+//! Bundles are typically tuples of [`Component`]s.
+//! ```rust
+//! use axecs::prelude::*;
+//! # use async_std::main;
+//!
+//! #[derive(Component)]
+//! struct MyComponentOne {
+//!     value : usize
+//! }
+//!
+//! #[derive(Component)]
+//! struct MyComponentTwo {
+//!     message : String
+//! }
+//!
+//! #[main]
+//! async fn main() {
+//!
+//!     let world = World::new();
+//!
+//!     world.spawn((
+//!         MyComponentOne { value : 123 },
+//!         MyComponentTwo { message : "Hello, World!".to_string() }
+//!     )).await;
+//!
+//! }
+//! ```
 
 
 mod validate;
 pub use validate::*;
 
 
-use crate::archetype::Archetype;
 use crate::component::{ self, Component, ComponentTypeInfo };
+use crate::component::archetype::Archetype;
 use crate::util::variadic::variadic_no_unit;
 use alloc::vec::Vec;
 use alloc::vec;
@@ -33,7 +62,7 @@ pub unsafe trait ComponentBundle {
 
     /// Pushes this bundle into an [`Archetype`] as a new row.
     ///
-    /// See [`ArchetypeColumn::push`](crate::archetype::ArchetypeColumn::push).
+    /// See [`ArchetypeColumn::push`](crate::component::archetype::ArchetypeColumn::push).
     ///
     /// # Safety
     /// The implementation of this method **must not** be no-op.
@@ -42,7 +71,7 @@ pub unsafe trait ComponentBundle {
 
     /// Overwrites a row in an [`Archetype`] with this bundle.
     ///
-    /// See [`ArchetypeColumn::write`](crate::archetype::ArchetypeColumn::write).
+    /// See [`ArchetypeColumn::write`](crate::component::archetype::ArchetypeColumn::write).
     ///
     /// # Safety
     /// The implementation of this method **must not** be no-op.
