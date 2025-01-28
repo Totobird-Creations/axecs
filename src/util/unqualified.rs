@@ -41,7 +41,7 @@ impl fmt::Display for UnqualifiedTypeName {
 
             if (ch == ':' && chars.peek().is_some_and(|(_, ch)| *ch == ':')) {
                 let _ = chars.next();
-                word_start = i;
+                word_start = i + 2;
                 if (was_close) {
                     write!(f, "::")?;
                 }
@@ -49,14 +49,14 @@ impl fmt::Display for UnqualifiedTypeName {
 
             else if (is_close_char(ch)) {
                 write!(f, "{}{}", &self.fully_qualified_type_name[word_start..i], ch)?;
-                word_start = 0;
+                word_start = i + 1;
                 was_close = true;
                 continue;
             }
 
             else if (is_split_char(ch)) {
                 write!(f, "{}{}", &self.fully_qualified_type_name[word_start..i], ch)?;
-                word_start = 0;
+                word_start = i + 1;
             }
 
             was_close = false;
@@ -86,6 +86,10 @@ mod tests {
 
     #[test]
     fn unqualify_type_name() {
+        assert_eq!(
+            format!("{}", unsafe{ UnqualifiedTypeName::from_unchecked("alloc::string::String") }),
+            "String"
+        );
         assert_eq!(
             format!("{}", unsafe{ UnqualifiedTypeName::from_unchecked("core::option::Option<(std::vec::Vec<*mut u8>,)>") }),
             "Option<(Vec<*mut u8>,)>"
