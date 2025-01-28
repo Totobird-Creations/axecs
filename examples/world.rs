@@ -46,7 +46,6 @@ async fn main() {
 
 
     // Run a system.
-    println!("A");
     print_my_components.run().await;
 
     // Directly querying the world.
@@ -55,7 +54,6 @@ async fn main() {
     }
 
     // Run a system.
-    println!("B");
     print_my_components.run().await;
 
 
@@ -63,8 +61,13 @@ async fn main() {
 
 
 async fn print_my_components(
-    q_my_components : Entities<'_, (Entity, &MyComponentOne, &MyComponentTwo)>
+        q_my_components : Entities<'_, (Entity, &MyComponentOne, &MyComponentTwo)>,
+    mut label           : Local<'_, Option<char>>
 ) {
+    let next_label = if let Some(label) = *label { ((label as u8) + 1) as char } else { 'A' };
+    println!("{}", next_label);
+    *label = Some(next_label);
+
     for (entity, one, two) in &q_my_components {
         println!("{:?} {} {}", entity, one.value, two.message);
     }

@@ -8,23 +8,23 @@ use core::task::{ Context, Poll };
 
 
 /// TODO: Doc comments
-pub struct PersistentQueryState<'l, Q : Query> {
+pub struct PersistentQueryState<'world, Q : Query> {
 
     /// TODO: Doc comments
-    world : &'l World,
+    world : &'world World,
 
     /// TODO: Doc comments
     state : Q::State
 
 }
 
-impl<'l, Q : Query> PersistentQueryState<'l, Q> {
+impl<'world, Q : Query> PersistentQueryState<'world, Q> {
 
     /// Creates a new [`PersistentQueryState`] which can later acquire values from the given [`World`].
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`Query`] does not violate the borrow checker rules. See [`QueryValidator`](crate::query::QueryValidator).
-    pub(crate) async unsafe fn new(world : &'l World) -> Self {
+    pub(crate) async unsafe fn new(world : &'world World) -> Self {
         Self {
             world,
             state : Q::init_state(world).await
@@ -33,7 +33,7 @@ impl<'l, Q : Query> PersistentQueryState<'l, Q> {
 
     /// TODO: Doc comments
     #[track_caller]
-    pub fn try_acquire(&'l mut self) -> Poll<Q::Item<'l>> {
+    pub fn try_acquire<'query>(&'query mut self) -> Poll<Q::Item<'world, 'query>> {
         match (unsafe{ Q::acquire(&self.world, &mut self.state) }) {
             Poll::Ready(out) => Poll::Ready(out.unwrap()),
             Poll::Pending    => Poll::Pending
@@ -42,7 +42,7 @@ impl<'l, Q : Query> PersistentQueryState<'l, Q> {
 
     /// TODO: Doc comments
     #[track_caller]
-    pub async fn acquire(&'l mut self) -> Q::Item<'l> {
+    pub async fn acquire<'query>(&'query mut self) -> Q::Item<'world, 'query> {
         unsafe{ QueryAcquireFuture::<Q>::new(
             self.world,
             &mut self.state
@@ -53,36 +53,39 @@ impl<'l, Q : Query> PersistentQueryState<'l, Q> {
 
 
 /// A [`Future`] that repeatedly calls [`Q::acquire`](Query::acquire) until it is acquired or otherwise errors.
-pub struct QueryAcquireFuture<'l, 'k, Q : Query> {
+pub struct QueryAcquireFuture<'world, 'state, Q : Query>
+where 'world : 'state
+{
 
     /// TODO: Doc comments
-    world  : &'l World,
+    world  : &'world World,
 
     /// TODO: Doc comments
-    state  : &'k mut Q::State
+    state  : Option<&'state mut Q::State>
 
 }
 
-impl<'l, 'k, Q : Query> Unpin for QueryAcquireFuture<'l, 'k, Q> { }
+impl<'world, 'state, Q : Query> Unpin for QueryAcquireFuture<'world, 'state, Q> { }
 
-impl<'l, 'k, Q : Query> QueryAcquireFuture<'l, 'k, Q> {
+impl<'world, 'state, Q : Query> QueryAcquireFuture<'world, 'state, Q>
+{
 
     /// Creates a new [`QueryAcquireFuture`] which tries to acquire values from the given [`World`].
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`Query`] does not violate the borrow checker rules. See [`QueryValidator`](crate::query::QueryValidator).
-    pub unsafe fn new(world : &'l World, state : &'k mut Q::State) -> Self { Self {
+    pub unsafe fn new(world : &'world World, state : &'state mut Q::State) -> Self { Self {
         world,
-        state
+        state : Some(state)
     } }
 
 }
 
-impl<'l, 'k, Q : Query> Future for QueryAcquireFuture<'l, 'k, Q> {
-    type Output = QueryAcquireResult<Q::Item<'l>>;
+impl<'world, 'state, Q : Query> Future for QueryAcquireFuture<'world, 'state, Q>
+{
+    type Output = QueryAcquireResult<Q::Item<'world, 'state>>;
 
     fn poll(mut self : Pin<&mut Self>, _ctx : &mut Context<'_>) -> Poll<Self::Output> {
-        // SAFETY: TODO
-        unsafe{ Q::acquire(&self.world, &mut self.state) }
+        unsafe{ Q::acquire(self.world, self.state.take().unwrap()) }
     }
 }

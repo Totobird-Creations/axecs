@@ -66,4 +66,7 @@ pub mod prelude {
     #[doc(inline)]
     pub use crate::component::query::{ With, Without, And, Nand, Or, Nor, Xor, Xnor };
 
+    #[doc(inline)]
+    pub use crate::system::{ In, Local };
+
 }

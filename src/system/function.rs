@@ -17,9 +17,9 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
     impl< F, $( $generic : Query , )* Return >
         IntoSystem<( (), $( $generic , )* ), Return>
         for F
-    where for<'l, 'k> &'l mut F:
+    where for<'l, 'world, 'state> &'l mut F:
         (AsyncFnMut( $( $generic , )* ) -> Return) +
-        (AsyncFnMut( $( <$generic as Query>::Item<'k> , )* ) -> Return)
+        (AsyncFnMut( $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
     {
         type System = FunctionSystem<Self, (), ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
 
@@ -50,9 +50,9 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
     unsafe impl< F, $( $generic : ReadOnlyQuery , )* Return >
         IntoReadOnlySystem<( (), $( $generic , )* ), Return>
         for F
-    where for<'l, 'k> &'l mut F:
+    where for<'l, 'world, 'state> &'l mut F:
         (AsyncFnMut( $( $generic , )* ) -> Return) +
-        (AsyncFnMut( $( <$generic as Query>::Item<'k> , )* ) -> Return)
+        (AsyncFnMut( $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
     { }
 
 
@@ -61,9 +61,9 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
     impl< F, Passed : SystemPassable, $( $generic : Query , )* Return >
         IntoSystem<( Passed, $( $generic , )* ), Return>
         for F
-    where for<'l, 'k> &'l mut F:
+    where for<'l, 'world, 'state> &'l mut F:
         (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
-        (AsyncFnMut( Passed, $( <$generic as Query>::Item<'k> , )* ) -> Return)
+        (AsyncFnMut( Passed, $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
     {
         type System = FunctionSystem<Self, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
 
@@ -94,9 +94,9 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
     unsafe impl< F, Passed : SystemPassable, $( $generic : ReadOnlyQuery , )* Return >
         IntoReadOnlySystem<( Passed, $( $generic , )* ), Return>
         for F
-    where for<'l, 'k> &'l mut F:
+    where for<'l, 'world, 'state> &'l mut F:
         (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
-        (AsyncFnMut( Passed, $( <$generic as Query>::Item<'k> , )* ) -> Return)
+        (AsyncFnMut( Passed, $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
     { }
 
 }
@@ -125,9 +125,9 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
     impl< F, $( $generic : Query , )* Return >
         System<Return>
         for FunctionSystem<F, (), ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>
-    where for<'l, 'k> &'l mut F:
+    where for<'l, 'world, 'state> &'l mut F:
         (AsyncFnMut( $( $generic , )* ) -> Return) +
-        (AsyncFnMut( $( <$generic as Query>::Item<'k> , )* ) -> Return)
+        (AsyncFnMut( $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
     {
         #[track_caller]
         async unsafe fn acquire_and_run(&mut self, passed : Self::Passed, world : &World) -> Return {
@@ -142,7 +142,7 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
             // SAFETY: TODO
             $( let $generic = unsafe{ QueryAcquireFuture::<$generic>::new(world, &mut self.query_states.${index()}) }; )*
             let ( $( $generic , )* ) = multijoin!( $( $generic , )* );
-            run_inner::< $( $generic::Item<'_> , )* Return >( &mut self.function $( , $generic.unwrap() )* ).await
+            run_inner::< $( $generic::Item<'_, '_> , )* Return >( &mut self.function $( , $generic.unwrap() )* ).await
         }
     }
 
@@ -150,9 +150,9 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
     unsafe impl< F, $( $generic : ReadOnlyQuery , )* Return >
         ReadOnlySystem<Return>
         for FunctionSystem<F, (), ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>
-    where for<'l, 'k> &'l mut F:
+    where for<'l, 'world, 'state> &'l mut F:
         (AsyncFnMut( $( $generic , )* ) -> Return) +
-        (AsyncFnMut( $( <$generic as Query>::Item<'k> , )* ) -> Return)
+        (AsyncFnMut( $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
     { }
 
 
@@ -161,9 +161,9 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
     impl< F, Passed : SystemPassable, $( $generic : Query , )* Return >
         System<Return>
         for FunctionSystem<F, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>
-    where for<'l, 'k> &'l mut F:
+    where for<'l, 'world, 'state> &'l mut F:
         (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
-        (AsyncFnMut( Passed, $( <$generic as Query>::Item<'k> , )* ) -> Return)
+        (AsyncFnMut( Passed, $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
     {
         type Passed = Passed;
 
@@ -181,7 +181,7 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
             // SAFETY: TODO
             $( let $generic = unsafe{ QueryAcquireFuture::<$generic>::new(world, &mut self.query_states.${index()}) }; )*
             let ( $( $generic , )* ) = multijoin!( $( $generic , )* );
-            run_inner::< Passed, $( $generic::Item<'_> , )* Return >( &mut self.function, passed $( , $generic.unwrap() )* ).await
+            run_inner::< Passed, $( $generic::Item<'_, '_> , )* Return >( &mut self.function, passed $( , $generic.unwrap() )* ).await
         }
     }
 
@@ -189,9 +189,9 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
     unsafe impl< F, Passed : SystemPassable, $( $generic : ReadOnlyQuery , )* Return >
         ReadOnlySystem<Return>
         for FunctionSystem<F, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>
-    where for<'l, 'k> &'l mut F:
+    where for<'l, 'world, 'state> &'l mut F:
         (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
-        (AsyncFnMut( Passed, $( <$generic as Query>::Item<'k> , )* ) -> Return)
+        (AsyncFnMut( Passed, $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
     { }
 
 }

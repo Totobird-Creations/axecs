@@ -23,7 +23,7 @@ use core::task::Poll;
 pub unsafe trait Query : Sized {
 
     /// TODO: Doc comments
-    type Item<'item>;
+    type Item<'world, 'state>;
 
     /// TODO: Doc comments
     type State = ();
@@ -33,10 +33,12 @@ pub unsafe trait Query : Sized {
 
     /// TODO: Doc comments
     ///
-    /// SAFETY
-    /// The caller is responsible for ensuring that the query does not violate any borrow checker or archetype rules.
-    /// See [`QueryValidator`] and [`BundleValidator`](crate::component::BundleValidator).
-    unsafe fn acquire<'world, 'state>(world : &'world World, state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world>>>;
+    /// # Safety
+    /// The caller is responsible for ensuring that:
+    /// - the query does not violate any borrow checker or archetype rules.
+    ///   See [`QueryValidator`] and [`BundleValidator`](crate::component::BundleValidator).
+    /// - `world` must be the same [`World`] that was used to initialise `state` in [`Query::init_state`].
+    unsafe fn acquire<'world, 'state>(world : &'world World, state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>>;
 
     /// Traverses the types in this bundle, joining them to a [`QueryValidator`].
     ///

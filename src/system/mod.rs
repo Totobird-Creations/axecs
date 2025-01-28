@@ -10,6 +10,9 @@ pub use mapped::*;
 mod state;
 pub use state::*;
 
+mod param;
+pub use param::*;
+
 
 use crate::world::World;
 use core::marker::PhantomData;
