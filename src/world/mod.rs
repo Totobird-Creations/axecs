@@ -28,6 +28,12 @@ impl World {
 
     /// TODO: Doc comments
     #[inline]
+    pub fn resources(&self) -> &ResourceStorage {
+        &self.resources
+    }
+
+    /// TODO: Doc comments
+    #[inline]
     pub fn archetypes(&self) -> &ArchetypeStorage {
         &self.archetypes
     }
