@@ -51,18 +51,6 @@ pub unsafe trait ComponentBundle {
     /// - the given `row` in the [`Archetype`] is not currently occupied.
     unsafe fn write_into(self, archetype : &mut Archetype, row : usize);
 
-    /// Drops a row in an [`Archetype`].
-    ///
-    /// See [`ArchetypeColumn::drop`](crate::archetype::ArchetypeColumn::drop).
-    ///
-    /// # Safety
-    /// The implementation of this method **must not** be no-op.
-    /// The caller is responsible for ensuring that:
-    /// - the given [`Archetype`] contains the exact [`Component`]s in this bundle. No more, no less.
-    /// - the given `row` in the [`Archetype`] is currently occupied.
-    /// - the given `row` in the [`Archetype`] is not dropped again until it is repopulated.
-    unsafe fn drop_in(archetype : &mut Archetype, row : usize);
-
     /// Traverses the types in this bundle, joining them to a [`BundleValidator`].
     ///
     /// After the entire [`BundleValidator`] has been constructed, [`BundleValidator::panic_on_violation`] will be called.
@@ -93,11 +81,6 @@ unsafe impl<C : Component + 'static> ComponentBundle for C {
         unsafe{ archetype.get_column_mut::<Self>().unwrap_unchecked().write::<Self>(row, self); }
     }
 
-    unsafe fn drop_in(archetype : &mut Archetype, row : usize) {
-        // SAFETY: The caller is responsible for upholding the safety guarantees.
-        unsafe{ archetype.get_column_mut::<Self>().unwrap_unchecked().drop::<Self>(row); }
-    }
-
     fn validate() -> BundleValidator {
         BundleValidator::of_included::<component::marker::Component<C>>()
     }
@@ -118,8 +101,6 @@ unsafe impl ComponentBundle for () {
     unsafe fn push_into(self, _archetype : &mut Archetype) { }
 
     unsafe fn write_into(self, _archetype : &mut Archetype, _row : usize) { }
-
-    unsafe fn drop_in(_archetype : &mut Archetype, _row : usize) { }
 
     fn validate() -> BundleValidator {
         BundleValidator::empty()
@@ -152,11 +133,6 @@ macro impl_component_bundle_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),*
         unsafe fn write_into(self, archetype : &mut Archetype, row : usize) {
             // SAFETY: The caller is responsible for upholding the safety guarantees.
             $( unsafe{ <$generic as ComponentBundle>::write_into(self.${index()}, archetype, row); } )*
-        }
-
-        unsafe fn drop_in(archetype : &mut Archetype, row : usize) {
-            // SAFETY: The caller is responsible for upholding the safety guarantees.
-            $( unsafe{ <$generic as ComponentBundle>::drop_in(archetype, row); } )*
         }
 
         fn validate() -> BundleValidator {

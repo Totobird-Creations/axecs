@@ -1,4 +1,33 @@
-//! TODO: Doc comments
+//! Entities are 'things' which [`Component`](crate::component::Component)s can be attached to.
+//! They live in [`World`](crate::world::World)s.
+//!
+//! An entity can be spawned using [`World::spawn`](crate::world::World::spawn) or similar.
+//! ```rust
+//! use axecs::prelude::*;
+//! # use async_std::main;
+//!
+//! # #[derive(Component)]
+//! # struct Position { x : f32, y : f32, z : f32 }
+//!
+//! # #[derive(Component)]
+//! # struct Velocity { x : f32, y : f32, z : f32 }
+//!
+//! #[main]
+//! async fn main() {
+//!
+//!     let world = World::new();
+//!
+//!     let entity_0 = world.spawn(()).await; // Spawns an entity with no components.
+//!
+//!     let entity_1 = world.spawn((
+//!         Position { x : 0.0, y : 1.0, z : 2.0 },
+//!         Velocity { x : 2.5, y : -0.23, z : 10.0 }
+//!     )).await; // Spawns an entity with the `Position` and `Velocity` components.
+//!
+//!     world.despawn(entity_0);
+//!
+//! }
+//! ```
 
 
 mod query;

@@ -16,61 +16,8 @@
 //! | 1         | 89.0   | 37.5       |
 //! | 2         | 1.5    | 95.0       |
 //!
-//! #### Usage
-//! Typically, a [`World`](crate::world::World) will manage the archetypes for you and provide
-//! a safe API, but they can be used directly as well.
-//!
-//! ```rust
-//! use axecs::prelude::*;
-//! use axecs::archetype::Archetype;
-//! use core::any::type_name;
-//!
-//! #[derive(Component)]
-//! struct ComponentOne {
-//!     value : usize
-//! }
-//!
-//! #[derive(Component)]
-//! struct ComponentTwo {
-//!     value : usize
-//! }
-//!
-//! type Bundle = ( ComponentOne, ComponentTwo, );
-//!
-//! let mut archetype = Archetype::new::<Bundle>(0, type_name::<Bundle>());
-//! //                                             |^^^^^^^^^^^^^^^^^^^^^
-//! //                                             | This argument only exists in debug mode,
-//! //                                             | or when the `keep_debug_names` feature is
-//! //                                             | enabled.
-//!
-//! //                                              | This bundle must contain the exact
-//! //                                              | component types that this archetype
-//! //                                              | stores. No more, no less.
-//! //                                              |vvvvvv
-//! let entity_row = unsafe{ archetype.spawn_unchecked::<Bundle>((
-//!     ComponentOne { value : 123 },
-//!     ComponentTwo { value : 456 }
-//! )) };
-//!
-//! for (one, two,) in unsafe{ archetype.query_unchecked_mut::<
-//!     (&mut ComponentOne, &mut ComponentTwo,)
-//! // |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-//! // | This bundle must be a subset of the component types that this archetype stores. No
-//! // | more, no less.
-//! >() } {
-//!
-//! }
-//!
-//! if (archetype.has_row(entity_row)) {
-//!     //                                   | This bundle must contain the exact component
-//!     //                                   | types that this archetype stores. No more, no
-//!     //                                   | less.
-//!     //                                   |vvvvvv
-//!     unsafe{ archetype.despawn_unchecked::<Bundle>(entity_row) };
-//! // |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-//! // | This operation is undefined behaviour if no entity exists at `entity_row`.
-//! }
-//! ```
+//! #### Examples
+//! See [`ArchetypeStorage`] and [`Archetype`].
 
 
 mod storage;
@@ -92,6 +39,56 @@ use alloc::vec::Vec;
 
 
 /// A single table of entities, all with the same componenets.
+///
+/// Typically, a [`World`](crate::world::World) will manage the archetypes for you and provide
+/// a safe API, but they can be used directly as well.
+/// ```rust
+/// use axecs::prelude::*;
+/// use axecs::archetype::Archetype;
+/// use core::any::type_name;
+///
+/// #[derive(Component)]
+/// struct ComponentOne {
+///     value : usize
+/// }
+///
+/// #[derive(Component)]
+/// struct ComponentTwo {
+///     value : usize
+/// }
+///
+/// type Bundle = ( ComponentOne, ComponentTwo, );
+///
+/// let mut archetype = Archetype::new::<Bundle>(0, type_name::<Bundle>());
+/// //                                             |^^^^^^^^^^^^^^^^^^^^^
+/// //                                             | This argument only exists in debug mode,
+/// //                                             | or when the `keep_debug_names` feature is
+/// //                                             | enabled.
+///
+/// //                                              | This bundle must contain the exact
+/// //                                              | component types that this archetype
+/// //                                              | stores. No more, no less.
+/// //                                              |vvvvvv
+/// let entity_row = unsafe{ archetype.spawn_unchecked::<Bundle>((
+///     ComponentOne { value : 123 },
+///     ComponentTwo { value : 456 }
+/// )) };
+///
+/// for (one, two,) in unsafe{ archetype.query_unchecked_mut::<
+///     (&mut ComponentOne, &mut ComponentTwo,)
+/// // |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/// // | This bundle must be a subset of the component types that this archetype stores. No
+/// // | more, no less.
+/// >() } {
+///
+/// }
+///
+/// if (archetype.has_row(entity_row)) {
+///     unsafe{ archetype.despawn_unchecked(entity_row) };
+/// // |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/// // | This operation is *undefined behaviour* if no entity exists at the given row.
+/// }
+/// ```
 pub struct Archetype {
 
     /// The ID of this archetype.
@@ -284,13 +281,12 @@ impl Archetype {
     /// In memory, the row is not actually modified. Its destructor is run and the row is marked as unoccupied.
     ///
     /// # Safety
-    /// The caller is responsible for ensuring that:
-    /// - the given bundle type `C` contains the exact [`Component`]s in this archetype. No more, no less.
-    /// - the given bundle type `C` does not violate the archetype rules. See [`BundleValidator`](crate::component::BundleValidator).
-    /// - the given `row` is currently occupied
-    pub unsafe fn despawn_unchecked<C : ComponentBundle>(&mut self, row : usize) {
-        // SAFETY: The caller is responsible for upholding the safety guarantees.
-        unsafe{ C::drop_in(self, row) }
+    /// The caller is responsible for ensuring that the given `row` is currently occupied.
+    pub unsafe fn despawn_unchecked(&mut self, row : usize) {
+        for column in &mut self.columns {
+            // SAFETY: The caller is responsible for ensuring that the given `row` is currently occupied.
+            unsafe{ column.get_mut().drop(row); }
+        }
         self.unoccupied_rows.push(row);
     }
 
@@ -398,7 +394,7 @@ mod tests {
         assert_eq!(entity1_row, 1);
 
         // Despawn entity.
-        unsafe{ archetype.despawn_unchecked::<Bundle>(entity0_row) };
+        unsafe{ archetype.despawn_unchecked(entity0_row) };
 
         // Reuse open rows.
         let entity2_row = unsafe{ archetype.spawn_unchecked::<Bundle>((

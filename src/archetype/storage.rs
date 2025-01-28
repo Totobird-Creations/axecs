@@ -18,6 +18,8 @@ use alloc::vec::Vec;
 
 
 /// A wrapper for several different [`Archetype`]s.
+///
+/// TODO: Example
 pub struct ArchetypeStorage {
 
     /// The inner data of this [`ArchetypeStorage`], behind a [`RwLock`].
@@ -108,6 +110,16 @@ impl ArchetypeStorage {
     }
 
     /// Acquires a read lock to an [`Archetype`] by ID.
+    pub fn get_ref_by_id(&self, archetype_id : usize) -> Poll<Option<RwLockReadGuard<Archetype>>> {
+        let Poll::Ready(inner) = self.inner.try_read() else { return Poll::Pending };
+        let Some(archetype) = inner.archetypes.get(archetype_id) else { return Poll::Ready(None) };
+        match (archetype.try_read()) {
+            Poll::Ready(out) => Poll::Ready(Some(out)),
+            Poll::Pending    => Poll::Pending
+        }
+    }
+
+    /// Acquires a read lock to an [`Archetype`] by ID, without checking if it exists.
     ///
     /// # Safety
     /// The caller is responsible for ensuring that this [`ArchetypeStorage`] actually has an [`Archetype`] by this ID.
@@ -150,6 +162,16 @@ impl ArchetypeStorage {
     }
 
     /// Acquires a write lock to an [`Archetype`] by ID.
+    pub fn get_mut_by_id(&self, archetype_id : usize) -> Poll<Option<RwLockWriteGuard<Archetype>>> {
+        let Poll::Ready(inner) = self.inner.try_read() else { return Poll::Pending };
+        let Some(archetype) = inner.archetypes.get(archetype_id) else { return Poll::Ready(None) };
+        match (archetype.try_write()) {
+            Poll::Ready(out) => Poll::Ready(Some(out)),
+            Poll::Pending    => Poll::Pending
+        }
+    }
+
+    /// Acquires a write lock to an [`Archetype`] by ID, without checking if it exists.
     ///
     /// # Safety
     /// The caller is responsible for ensuring that this [`ArchetypeStorage`] actually has an [`Archetype`] by this ID.
@@ -245,6 +267,26 @@ impl ArchetypeStorage {
             ));
         }
         entities.into_boxed_slice().into_iter()
+    }
+
+    /// TODO: Doc comments
+    pub async fn despawn(&self, entity : Entity) {
+        let archetype_id = entity.archetype_id();
+        let Some(mut archetype) = FunctionCallFuture::new(|| self.get_mut_by_id(archetype_id)).await else { return };
+        let row = entity.archetype_row();
+        if (archetype.has_row(row)) {
+            // SAFETY: TODO
+            unsafe{ archetype.despawn_unchecked(row); }
+        }
+    }
+
+    /// TODO: Doc comments
+    pub async fn despawn_unchecked(&self, entity : Entity) {
+        let archetype_id = entity.archetype_id();
+        // SAFETY: TODO
+        let mut archetype = FunctionCallFuture::new(|| unsafe{ self.get_mut_by_id_unchecked(archetype_id) }).await;
+        // SAFETY: TODO
+        unsafe{ archetype.despawn_unchecked(entity.archetype_row()); }
     }
 
     /// Returns [`Entities`] that match the given [`ReadOnlyComponentQuery`] and [`ComponentFilter`].

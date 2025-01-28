@@ -61,6 +61,16 @@ impl World {
         unsafe{ self.archetypes.spawn_batch_unchecked::<B>(bundles).await }
     }
 
+    /// TODO: Doc comments
+    pub async fn despawn(&self, entity : Entity) {
+        self.archetypes.despawn(entity).await
+    }
+
+    /// TODO: Doc comments
+    pub async unsafe fn despawn_unchecked(&self, entity : Entity) {
+        self.archetypes.despawn_unchecked(entity).await
+    }
+
 
     /// TODO: Doc comments
     #[track_caller]

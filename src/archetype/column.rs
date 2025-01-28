@@ -120,10 +120,8 @@ impl ArchetypeColumn {
     /// After the operation, consider this cell **unoccupied**.
     ///
     /// # Safety
-    /// The caller is responsible for ensuring that:
-    /// - the cell at the given `index` **is occupied**.
-    /// - `C` is the type stored in this column.
-    pub unsafe fn drop<C : Component>(&mut self, index : usize) {
+    /// The caller is responsible for ensuring that the cell at the given `index` **is occupied**.
+    pub unsafe fn drop(&mut self, index : usize) {
         let drop = self.type_drop();
         // SAFETY: The caller is responsible for upholding the safety guarantees.
         unsafe{ self.cells.get_unchecked_mut(index).drop(drop); }

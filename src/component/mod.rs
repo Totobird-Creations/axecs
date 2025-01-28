@@ -68,7 +68,7 @@ use core::cmp::Ordering;
 ///     Jump
 /// }
 /// ```
-pub trait Component { }
+pub trait Component : Sized { }
 
 
 /// Information about a [`Component`] type, such as [`TypeId`], [`Layout`], and drop function.
