@@ -17,11 +17,19 @@ struct MyComponentTwo {
 async fn main() {
     let world = World::new();
 
+    let mut query_my_components = world.query_mut::<(Entities<(&mut MyComponentOne), With<MyComponentTwo>>)>().await;
+
+    let mut print_my_components = world.system(print_my_components).await;
+
+
+    // Spawn some entities.
+
     world.spawn(()).await;
 
     world.spawn((
         MyComponentOne { value : 123 },
     )).await;
+
     world.spawn(
         MyComponentOne { value : 456 }
     ).await;
@@ -36,16 +44,28 @@ async fn main() {
         MyComponentTwo { message : "World, Hello!" }
     )).await;
 
-    for (entity, one) in &world.query::<(Entities<(Entity, &MyComponentOne), With<MyComponentTwo>>)>().acquire().await {
-        println!("A {:?} {:?}", entity, one.value);
-    }
 
-    for (entity, two, one) in &mut world.query_mut::<(Entities<(Entity, &MyComponentTwo, &mut MyComponentOne)>)>().acquire().await {
-        println!("B {:?} {:?} {:?} {:?}", entity, two.message, two.message, one.value);
+    // Run a system.
+    println!("A");
+    print_my_components.run().await;
+
+    // Directly querying the world.
+    for (one) in &mut query_my_components.acquire().await {
         one.value += 256
     }
-    for (entity, one) in &mut world.query::<(Entities<(Entity, &MyComponentOne)>)>().acquire().await {
-        println!("C {:?} {:?}", entity, one.value);
-    }
 
+    // Run a system.
+    println!("B");
+    print_my_components.run().await;
+
+
+}
+
+
+async fn print_my_components(
+    q_my_components : Entities<'_, (Entity, &MyComponentOne, &MyComponentTwo)>
+) {
+    for (entity, one, two) in &q_my_components {
+        println!("{:?} {} {}", entity, one.value, two.message);
+    }
 }

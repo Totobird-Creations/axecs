@@ -130,11 +130,12 @@ variadic_no_unit!{ impl_component_bundle_for_tuple }
 /// Implements [`ComponentBundle`] for a tuple of [`ComponentBundle`]s.
 macro impl_component_bundle_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) {
 
+    #[allow(non_snake_case)]
     $( #[ $meta ] )*
     unsafe impl< $( $generic : ComponentBundle ),* > ComponentBundle for ( $( $generic , )* ) {
 
         fn type_info() -> Vec<ComponentTypeInfo> {
-            $( #[allow(non_snake_case)] let mut $generic = <$generic as ComponentBundle>::type_info(); )*
+            $( let mut $generic = <$generic as ComponentBundle>::type_info(); )*
             let mut out = Vec::with_capacity( 0 $( + $generic.len() )* );
             $( out.append( &mut $generic ); )*
             out.sort_unstable();

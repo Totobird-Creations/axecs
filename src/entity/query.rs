@@ -57,9 +57,9 @@ impl<Q : ComponentQuery, F : ComponentFilter> Entities<'_, Q, F> {
 unsafe impl<Q : ComponentQuery + 'static, F : ComponentFilter> Query for Entities<'_, Q, F> {
     type Item<'item> = Entities<'item, Q, F>;
 
-    fn init_state<'world>(_world : &'world World) -> Self::State<'world> { () }
+    async fn init_state<'world>(_world : &'world World) -> Self::State { () }
 
-    unsafe fn acquire<'world>(world : &'world World, _state : &mut Self::State<'world>) -> Poll<QueryAcquireResult<Self::Item<'world>>> {
+    unsafe fn acquire<'world, 'state>(world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world>>> {
         // SAFETY: TODO
         unsafe{ Self::acquire_archetypes_unchecked(world.archetypes()) }.map(|out| QueryAcquireResult::Ready(out))
     }

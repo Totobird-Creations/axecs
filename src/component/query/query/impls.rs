@@ -139,6 +139,7 @@ variadic_no_unit!{ #[doc(fake_variadic)] impl_component_query_for_tuple }
 /// Implements [`ComponentQuery`] and [`ReadOnlyComponentQuery`] for a tuples of those types.
 macro impl_component_query_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) {
 
+    #[allow(non_snake_case)]
     $( #[ $meta ] )*
     unsafe impl< $( $generic : ComponentQuery ),* > ComponentQuery for ( $( $generic , )* ) {
         type Item<'item> = ( $( $generic::Item<'item> , )* );
@@ -150,7 +151,7 @@ macro impl_component_query_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* 
 
         unsafe fn iter_rows_ref<'world>(archetype : &'world Archetype) -> QueryAcquireResult<impl Iterator<Item = Self::Item<'world>>> {
             // SAFETY: The caller is responsible for upholding the safety guarantees.
-            $( #[allow(non_snake_case)] let $generic = match (unsafe{ <$generic as ComponentQuery>::iter_rows_ref(archetype) }) {
+            $( let $generic = match (unsafe{ <$generic as ComponentQuery>::iter_rows_ref(archetype) }) {
                 QueryAcquireResult::Ready(out)            => out,
                 #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
                 QueryAcquireResult::DoesNotExist { name } => { return QueryAcquireResult::DoesNotExist { name }; }
@@ -166,7 +167,7 @@ macro impl_component_query_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* 
                 //         this operation will not access a column that is already mutable accessed
                 //         elsewhere, as each column [`Component`] type stored in the [`Archetype`]
                 //         is unique.
-            $( #[allow(non_snake_case)] let $generic = match (unsafe{ <$generic as ComponentQuery>::iter_rows_mut(archetype) }) {
+            $( let $generic = match (unsafe{ <$generic as ComponentQuery>::iter_rows_mut(archetype) }) {
                 QueryAcquireResult::Ready(out)            => out,
                 #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
                 QueryAcquireResult::DoesNotExist { name } => { return QueryAcquireResult::DoesNotExist { name }; }

@@ -1,12 +1,11 @@
 //! TODO: Doc comments
 
 
-/*
 /// TODO: Doc comments
 pub(crate) macro variadic {
 
     ( $( #[ $meta:meta ] )* $builder:ident ) => {
-        variadic!{ $( #[ $meta ] )* $builder => T19, T18, T17, T16, T15, T14, T13, T12, T11, T10, T9, T8, T7, T6, T5, T4, T3, T2, T1, T0 }
+        variadic!{ $( #[ $meta ] )* $builder => T11, T10, T9, T8, T7, T6, T5, T4, T3, T2, T1, T0 }
     },
 
     ( $( #[ $meta:meta ] )* $builder:ident => $( $generic:ident ),* $(,)? ) => {
@@ -36,14 +35,14 @@ pub(crate) macro variadic {
         variadic!{@inner $count $( #[ $meta ] )* $builder => $( $next ),* }
     }
 
-}*/
+}
 
 
 /// TODO: Doc comments
 pub(crate) macro variadic_no_unit {
 
     ( $( #[ $meta:meta ] )* $builder:ident ) => {
-        variadic_no_unit!{ $( #[ $meta ] )* $builder => T19, T18, T17, T16, T15, T14, T13, T12, T11, T10, T9, T8, T7, T6, T5, T4, T3, T2, T1, T0 }
+        variadic_no_unit!{ $( #[ $meta ] )* $builder => T11, T10, T9, T8, T7, T6, T5, T4, T3, T2, T1, T0 }
     },
 
     ( $( #[ $meta:meta ] )* $builder:ident => $( $generic:ident ),* $(,)? ) => {

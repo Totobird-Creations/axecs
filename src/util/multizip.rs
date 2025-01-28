@@ -6,20 +6,20 @@
 /// This is a variadic version of [`Iterator::zip`].
 pub(crate) macro multizip {
 
-    ( $( $generics:ident ),+ $(,)? ) => { {
+    ( $( $generic:ident ),+ $(,)? ) => { {
 
-        struct Zip< $( $generics : Iterator , )* >( $( $generics , )* );
+        struct Zip< $( $generic : Iterator , )* >( $( $generic , )* );
 
-        impl< $( $generics : Iterator , )* > Iterator for Zip< $( $generics , )* > {
-            type Item = ( $( $generics::Item , )* );
+        #[allow(non_snake_case)]
+        impl< $( $generic : Iterator , )* > Iterator for Zip< $( $generic , )* > {
+            type Item = ( $( $generic::Item , )* );
             fn next(&mut self) -> Option<Self::Item> {
-                #[allow(non_snake_case)]
-                let Self( $( $generics , )* ) = self;
-                Some(( $( $generics.next()? , )* ))
+                let Self( $( $generic , )* ) = self;
+                Some(( $( $generic.next()? , )* ))
             }
         }
 
-        Zip ( $( $generics , )* )
+        Zip ( $( $generic , )* )
 
     } }
 

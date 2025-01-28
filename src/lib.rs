@@ -8,7 +8,8 @@
     macro_metavar_expr,
     associated_type_defaults,
     impl_trait_in_assoc_type,
-    async_fn_track_caller
+    async_fn_track_caller,
+    future_join
 )]
 #![feature(
     assert_matches,
@@ -25,7 +26,7 @@ pub mod entity;
 pub mod component;
 
 pub mod query;
-// TODO: pub mod system;
+pub mod system;
 
 pub mod util;
 

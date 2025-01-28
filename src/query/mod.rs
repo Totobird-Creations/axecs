@@ -26,17 +26,17 @@ pub unsafe trait Query : Sized {
     type Item<'item>;
 
     /// TODO: Doc comments
-    type State<'state> = ();
+    type State = ();
 
     /// TODO: Doc comments
-    fn init_state<'world>(world : &'world World) -> Self::State<'world>;
+    async fn init_state<'world>(world : &'world World) -> Self::State;
 
     /// TODO: Doc comments
     ///
     /// SAFETY
     /// The caller is responsible for ensuring that the query does not violate any borrow checker or archetype rules.
     /// See [`QueryValidator`] and [`BundleValidator`](crate::component::BundleValidator).
-    unsafe fn acquire<'world>(world : &'world World, state : &mut Self::State<'world>) -> Poll<QueryAcquireResult<Self::Item<'world>>>;
+    unsafe fn acquire<'world, 'state>(world : &'world World, state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world>>>;
 
     /// Traverses the types in this bundle, joining them to a [`QueryValidator`].
     ///

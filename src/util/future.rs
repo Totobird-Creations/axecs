@@ -3,6 +3,7 @@
 
 use std::pin::Pin;
 use core::task::{ Context, Poll };
+use core::future::join;
 
 
 /// TODO: Doc comments
@@ -27,4 +28,16 @@ impl<T, F : FnMut() -> Poll<T>> Future for FunctionCallFuture<T, F> {
     fn poll(mut self : Pin<&mut Self>, _ctx : &mut Context<'_>) -> Poll<Self::Output> {
         (self.f)()
     }
+}
+
+
+/// TODO: Doc comments
+pub(crate) macro multijoin {
+
+    ( $(,)? ) => { () },
+
+    ( $single:expr $(,)? ) => { ( $single.await , ) },
+
+    ( $( $multiple:expr ),+ $(,)? ) => { join!( $( $multiple , )* ).await }
+
 }

@@ -40,3 +40,4 @@ features = [ "full" ]
 [lints.rust]
 unused_parens     = "allow"
 internal_features = "allow"
+async_fn_in_trait = "allow"
