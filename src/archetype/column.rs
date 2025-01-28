@@ -5,7 +5,8 @@ use crate::component::{ Component, ComponentTypeInfo };
 use core::any::TypeId;
 use core::alloc::Layout;
 use core::ptr::NonNull;
-use std::alloc::{ alloc, dealloc, handle_alloc_error };
+use alloc::alloc::{ alloc, dealloc, handle_alloc_error };
+use alloc::vec::Vec;
 
 
 /// A single column of an [`Archetype`](crate::archetype::Archetype), storing a single [`Component`] type.

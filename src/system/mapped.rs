@@ -3,6 +3,7 @@
 
 use crate::prelude::World;
 use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
+use core::ops::AsyncFnMut;
 use core::marker::PhantomData;
 
 
@@ -62,7 +63,7 @@ unsafe impl<APassed, A, AParams, BPassed, B, Return>
     IntoReadOnlySystem<(), Return>
     for IntoMappedSystem<APassed, A, AParams, BPassed, B, Return>
 where   A         : IntoReadOnlySystem<AParams, BPassed>,
-        B         : AsyncFn(BPassed) -> Return,
+        B         : AsyncFnMut(BPassed) -> Return,
         A::System : ReadOnlySystem<BPassed, Passed = APassed>
 { }
 
@@ -106,5 +107,5 @@ unsafe impl<APassed, A, BPassed, B, Return>
     ReadOnlySystem<Return>
     for MappedSystem<APassed, A, BPassed, B, Return>
 where   A : ReadOnlySystem<BPassed, Passed = APassed>,
-        B : AsyncFn(BPassed) -> Return
+        B : AsyncFnMut(BPassed) -> Return
 { }

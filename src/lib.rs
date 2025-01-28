@@ -17,6 +17,9 @@
     doc_cfg
 )]
 
+#![no_std]
+extern crate alloc;
+
 
 pub mod world;
 // TODO: pub mod resource;

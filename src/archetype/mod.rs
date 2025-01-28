@@ -87,6 +87,8 @@ use crate::util::unqualified::UnqualifiedTypeName;
 use core::any::TypeId;
 use core::fmt;
 use core::cell::UnsafeCell;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 
 /// A single table of entities, all with the same componenets.

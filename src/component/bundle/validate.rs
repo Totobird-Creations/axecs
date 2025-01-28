@@ -6,15 +6,16 @@ use crate::util::unqualified::UnqualifiedTypeName;
 use core::any::TypeId;
 #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
 use core::any::type_name;
-use core::hash::{ Hash, Hasher };
-use std::collections::HashSet;
+use core::fmt;
+use core::cmp::Ordering;
+use alloc::collections::BTreeSet;
 
 
 /// A container that stores the types included in a [`ComponentBundle`](crate::component::ComponentBundle).
 pub struct BundleValidator {
 
     /// The [`Component`](crate::component::Component) types that the [`ComponentBundle`](crate::component::ComponentBundle) contains, how they are contained, and whether they conflict.
-    entries : HashSet<BundleValidatorEntry>
+    entries : BTreeSet<BundleValidatorEntry>
 
 }
 
@@ -39,9 +40,14 @@ impl PartialEq for BundleValidatorEntry {
     }
 }
 impl Eq for BundleValidatorEntry { }
-impl Hash for BundleValidatorEntry {
-    fn hash<H : Hasher>(&self, state : &mut H) {
-        Hash::hash::<H>(&self.id, state)
+impl PartialOrd for BundleValidatorEntry {
+    fn partial_cmp(&self, other : &Self) -> Option<Ordering> {
+        Some(Ord::cmp(&self, &other))
+    }
+}
+impl Ord for BundleValidatorEntry {
+    fn cmp(&self, other : &Self) -> Ordering {
+        Ord::cmp(&self.id, &other.id)
     }
 }
 
@@ -64,14 +70,14 @@ impl BundleValidator {
     ///
     /// No values are requested by the [`ComponentBundle`](crate::component::ComponentBundle).
     pub fn empty() -> Self { Self {
-        entries : HashSet::new()
+        entries : BTreeSet::new()
     } }
 
     /// Creates a new [`BundleValidator`] from a type `T` and [`BundleValidatorEntryState`].
     fn of<T : 'static>(
         state : BundleValidatorEntryState
     ) -> Self {
-        let mut entries = HashSet::with_capacity(1);
+        let mut entries = BTreeSet::new();
         entries.insert(BundleValidatorEntry::of::<T>(
             state
         ));
@@ -109,26 +115,39 @@ impl BundleValidator {
     /// Panics if any requested values conflict with each other.
     #[track_caller]
     pub fn panic_on_violation(&self) {
+        if (self.entries.iter().any(|entry| entry.state.is_error())) {
+            panic!("{}", self);
+        }
+    }
+
+}
+
+impl fmt::Display for BundleValidator {
+    fn fmt(&self, f : &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut has_errors = false;
-        let mut errors     = String::new();
         for entry in &self.entries {
+            if (entry.state.is_error()) {
+                if (! has_errors) {
+                    write!(f, "Bundle violates the archetype rules:")?;
+                }
+                has_errors = true;
+            }
             match (entry.state) {
                 BundleValidatorEntryState::IncludedError => {
-                    has_errors = true;
                     #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
                     // SAFETY: `entry.name` is a value previously generated using `core::any::type_name`.
-                    { errors += &format!("\n  Already included {}", unsafe{ UnqualifiedTypeName::from_unchecked(entry.name) }); }
+                    { write!(f, "\n  Already included {}", unsafe{ UnqualifiedTypeName::from_unchecked(entry.name) })?; }
                     #[cfg(not(any(debug_assertions, feature = "keep_debug_names")))]
-                    { errors += &format!("\n  Already included item"); }
+                    { write!(f, "\n  Already included item")?; }
                 },
                 _ => { }
             }
         }
-        if (has_errors) {
-            panic!("Bundle violates the archetype rules:{}", errors);
+        if (! has_errors) {
+            write!(f, "Query OK")?;
         }
+        Ok(())
     }
-
 }
 
 impl BundleValidatorEntry {
@@ -152,6 +171,13 @@ impl BundleValidatorEntryState {
         match ((a, b)) {
             ( Self::IncludedError , _ ) | ( _ , Self::IncludedError ) => Self::IncludedError,
             ( Self::Included , Self::Included ) => Self::IncludedError
+        }
+    }
+
+    fn is_error(&self) -> bool {
+        match (self) {
+            BundleValidatorEntryState::Included      => false,
+            BundleValidatorEntryState::IncludedError => true
         }
     }
 

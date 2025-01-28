@@ -8,6 +8,7 @@ use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryValidator };
 use crate::util::rwlock::RwLockWriteGuard;
 use core::task::Poll;
 use core::marker::PhantomData;
+use alloc::vec::Vec;
 
 
 /// TODO: Doc comments

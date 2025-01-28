@@ -12,7 +12,9 @@ use core::any::TypeId;
 #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
 use core::any::type_name;
 use core::task::Poll;
-use std::collections::HashMap;
+use alloc::collections::BTreeMap;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 
 /// A wrapper for several different [`Archetype`]s.
@@ -27,10 +29,10 @@ pub struct ArchetypeStorage {
 pub struct ArchetypeStorageInner {
 
     /// The [`TypeId`] of a [`ComponentBundle`] implementor, to the index of the [`Archetype`] in [`ArchetypeStorageInner::archetypes`].
-    bundles    : HashMap<TypeId, usize>,
+    bundles    : BTreeMap<TypeId, usize>,
 
     /// The [`TypeId`]s of the [`Component`](crate::component::Component)s stored in an [`Archetype`], to the index of the [`Archetype`] in [`ArchetypeStorageInner::archetypes`].
-    components : HashMap<Box<[TypeId]>, usize>,
+    components : BTreeMap<Box<[TypeId]>, usize>,
 
     /// The actual [`Archetype`]s. The ID of the archetype is its index in this Vec.
     archetypes : Vec<RwLock<Archetype>>
@@ -75,8 +77,8 @@ impl ArchetypeStorage {
     /// Creates an empty [`ArchetypeStorage`].
     pub fn new() -> Self { Self {
         inner : RwLock::new(ArchetypeStorageInner {
-            bundles    : HashMap::new(),
-            components : HashMap::new(),
+            bundles    : BTreeMap::new(),
+            components : BTreeMap::new(),
             archetypes : Vec::new()
         })
     } }

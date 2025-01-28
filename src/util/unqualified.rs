@@ -33,39 +33,35 @@ impl fmt::Debug for UnqualifiedTypeName {
 
 impl fmt::Display for UnqualifiedTypeName {
     fn fmt(&self, f : &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut chars     = self.fully_qualified_type_name.chars().peekable();
-        let mut word      = String::new();
-        let mut was_close = false;
+        let mut chars      = self.fully_qualified_type_name.chars().enumerate().peekable();
+        let mut word_start = 0;
+        let mut was_close  = false;
         loop {
-            let Some(ch) = chars.next() else { break };
+            let Some((i, ch)) = chars.next() else { break };
 
-            if (ch == ':' && chars.peek().is_some_and(|ch| *ch == ':')) {
+            if (ch == ':' && chars.peek().is_some_and(|(_, ch)| *ch == ':')) {
                 let _ = chars.next();
-                word.clear();
+                word_start = i;
                 if (was_close) {
                     write!(f, "::")?;
                 }
             }
 
             else if (is_close_char(ch)) {
-                write!(f, "{}{}", word, ch)?;
-                word.clear();
+                write!(f, "{}{}", &self.fully_qualified_type_name[word_start..i], ch)?;
+                word_start = 0;
                 was_close = true;
                 continue;
             }
 
             else if (is_split_char(ch)) {
-                write!(f, "{}{}", word, ch)?;
-                word.clear();
-            }
-
-            else {
-                word.push(ch);
+                write!(f, "{}{}", &self.fully_qualified_type_name[word_start..i], ch)?;
+                word_start = 0;
             }
 
             was_close = false;
         }
-        write!(f, "{}", word)?;
+        write!(f, "{}", &self.fully_qualified_type_name[word_start..])?;
         Ok(())
     }
 }
@@ -86,6 +82,7 @@ fn is_close_char(ch : char) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::format;
 
     #[test]
     fn unqualify_type_name() {

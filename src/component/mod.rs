@@ -43,7 +43,7 @@ use core::any::TypeId;
 use core::any::type_name;
 use core::alloc::Layout;
 use core::ptr::NonNull;
-use core::hash::{ Hash, Hasher };
+use core::cmp::Ordering;
 
 
 /// A component which can be attached to an entity.
@@ -130,20 +130,15 @@ impl PartialEq for ComponentTypeInfo {
 impl Eq for ComponentTypeInfo { }
 impl PartialOrd for ComponentTypeInfo {
     #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(Ord::cmp(self, other))
     }
 }
 impl Ord for ComponentTypeInfo {
-    fn cmp(&self, other : &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other : &Self) -> Ordering {
         self.layout.align().cmp(&other.layout.align())
             .reverse()
             .then_with(|| self.type_id.cmp(&other.type_id))
-    }
-}
-impl Hash for ComponentTypeInfo {
-    fn hash<H : Hasher>(&self, state : &mut H) {
-        self.type_id.hash(state);
     }
 }
 

@@ -3,15 +3,16 @@ use crate::util::unqualified::UnqualifiedTypeName;
 use core::any::TypeId;
 #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
 use core::any::type_name;
-use core::hash::{ Hash, Hasher };
-use std::collections::HashSet;
+use core::fmt;
+use core::cmp::Ordering;
+use alloc::collections::BTreeSet;
 
 
 /// A container that stores the types requested by a [`Query`](crate::query::Query).
 pub struct QueryValidator {
 
     /// The value types that the [`Query`](crate::query::Query) accesses, how they are accessed, and whether they conflict.
-    entries : HashSet<QueryValidatorEntry>
+    entries : BTreeSet<QueryValidatorEntry>
 
 }
 
@@ -36,9 +37,14 @@ impl PartialEq for QueryValidatorEntry {
     }
 }
 impl Eq for QueryValidatorEntry { }
-impl Hash for QueryValidatorEntry {
-    fn hash<H : Hasher>(&self, state : &mut H) {
-        Hash::hash::<H>(&self.id, state)
+impl PartialOrd for QueryValidatorEntry {
+    fn partial_cmp(&self, other : &Self) -> Option<Ordering> {
+        Some(Ord::cmp(&self, &other))
+    }
+}
+impl Ord for QueryValidatorEntry {
+    fn cmp(&self, other : &Self) -> Ordering {
+        Ord::cmp(&self.id, &other.id)
     }
 }
 
@@ -69,17 +75,15 @@ impl QueryValidator {
     ///
     /// No values are requested by the [`Query`](crate::query::Query).
     pub fn empty() -> Self { Self {
-        entries : HashSet::new()
+        entries : BTreeSet::new()
     } }
 
     /// Creates a new [`QueryValidator`] from a type `T` and [`QueryValidatorEntryState`].
     fn of<T : 'static>(
         state : QueryValidatorEntryState
     ) -> Self {
-        let mut entries = HashSet::with_capacity(1);
-        entries.insert(QueryValidatorEntry::of::<T>(
-            state
-        ));
+        let mut entries = BTreeSet::new();
+        entries.insert(QueryValidatorEntry::of::<T>(state));
         Self { entries }
     }
 
@@ -134,34 +138,50 @@ impl QueryValidator {
     /// Panics if any requested values conflict with each other.
     #[track_caller]
     pub fn panic_on_violation(&self) {
+        if (self.entries.iter().any(|entry| entry.state.is_error())) {
+            panic!("{}", self);
+        }
+    }
+
+}
+
+impl fmt::Display for QueryValidator {
+    fn fmt(&self, f : &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut has_errors = false;
-        let mut errors     = String::new();
         for entry in &self.entries {
+            if (entry.state.is_error()) {
+                if (! has_errors) {
+                    write!(f, "Query would violate the borrow checker rules:")?;
+                }
+                has_errors = true;
+            }
             match (entry.state) {
                 QueryValidatorEntryState::MutableError => {
-                    has_errors = true;
                     #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
                     // SAFETY: `entry.name` is a value previously generated using `core::any::type_name`.
-                    { errors += &format!("\n  Already mutably borrowed {}", unsafe{ UnqualifiedTypeName::from_unchecked(entry.name) }); }
+                    { write!(f, "\n  Already mutably borrowed {}", unsafe{ UnqualifiedTypeName::from_unchecked(entry.name) })?; }
                     #[cfg(not(any(debug_assertions, feature = "keep_debug_names")))]
-                    { errors += &format!("\n  Already mutably borrowed item"); }
+                    { write!(f, "\n  Already mutably borrowed item"); }
                 },
                 QueryValidatorEntryState::OwnedError => {
+                    if (! has_errors) {
+                        write!(f, "Query would violate the borrow checker rules:")?;
+                    }
                     has_errors = true;
                     #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
                     // SAFETY: `entry.name` is a value previously generated using `core::any::type_name`.
-                    { errors += &format!("\n  Already took ownership of {}", unsafe{ UnqualifiedTypeName::from_unchecked(entry.name) }); }
+                    { write!(f, "\n  Already took ownership of {}", unsafe{ UnqualifiedTypeName::from_unchecked(entry.name) })?; }
                     #[cfg(not(any(debug_assertions, feature = "keep_debug_names")))]
-                    { errors += &format!("\n  Already took ownership of item"); }
+                    { write!(f, "\n  Already took ownership of item"); }
                 },
                 _ => { }
             }
         }
-        if (has_errors) {
-            panic!("Query would violate the borrow checker rules:{}", errors);
+        if (! has_errors) {
+            write!(f, "Query OK")?;
         }
+        Ok(())
     }
-
 }
 
 impl QueryValidatorEntry {
@@ -188,6 +208,16 @@ impl QueryValidatorEntryState {
             ( Self::MutableError , _ ) | ( _ , Self::MutableError ) => Self::MutableError,
             ( Self::Mutable      , _ ) | ( _ , Self::Mutable      ) => Self::MutableError,
             ( Self::Immutable , Self::Immutable ) => Self::Immutable
+        }
+    }
+
+    fn is_error(&self) -> bool {
+        match (self) {
+            QueryValidatorEntryState::Immutable    => false,
+            QueryValidatorEntryState::Mutable      => false,
+            QueryValidatorEntryState::Owned        => false,
+            QueryValidatorEntryState::MutableError => true,
+            QueryValidatorEntryState::OwnedError   => true
         }
     }
 

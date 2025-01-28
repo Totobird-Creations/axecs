@@ -6,6 +6,7 @@ use crate::query::{ Query, ReadOnlyQuery, QueryAcquireFuture };
 use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, SystemPassable };
 use crate::util::future::multijoin;
 use crate::util::variadic::variadic;
+use core::ops::AsyncFnMut;
 use core::marker::PhantomData;
 
 

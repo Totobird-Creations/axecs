@@ -15,6 +15,7 @@ pub use param::*;
 
 
 use crate::world::World;
+use core::ops::AsyncFnMut;
 use core::marker::PhantomData;
 
 
@@ -64,7 +65,7 @@ pub trait IntoSystem<Params, Return> : Sized {
     /// TODO: Doc comment
     fn map<'l, B, BParams, BReturn>(self, with : B)
         -> IntoMappedSystem<<Self::System as System<Return>>::Passed, Self, Params, Return, B, BReturn>
-    where   B            : AsyncFn(Return) -> BReturn,
+    where   B            : AsyncFnMut(Return) -> BReturn,
             Self::System : System<Return>
     {
         IntoMappedSystem {

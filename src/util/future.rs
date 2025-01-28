@@ -1,7 +1,7 @@
 //! TODO: Doc comments
 
 
-use std::pin::Pin;
+use core::pin::Pin;
 use core::task::{ Context, Poll };
 use core::future::join;
 

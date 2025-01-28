@@ -8,6 +8,8 @@ pub use validate::*;
 use crate::archetype::Archetype;
 use crate::component::{ self, Component, ComponentTypeInfo };
 use crate::util::variadic::variadic_no_unit;
+use alloc::vec::Vec;
+use alloc::vec;
 
 
 /// A bundle of [`Component`]s.

@@ -7,7 +7,7 @@ use core::ops::{ Deref, DerefMut };
 use core::pin::Pin;
 use core::task::{ Context, Poll };
 use core::mem::ManuallyDrop;
-use std::sync::Arc;
+use alloc::sync::Arc;
 
 
 /// TODO: Doc comments
