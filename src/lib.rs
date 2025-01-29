@@ -33,6 +33,8 @@ pub mod component;
 pub mod query;
 pub mod system;
 
+pub mod schedule;
+
 pub mod util;
 
 
@@ -89,6 +91,9 @@ pub mod prelude {
     pub use crate::component::query::{ With, Without, And, Nand, Or, Nor, Xor, Xnor };
 
     #[doc(inline)]
-    pub use crate::system::{ In, Local };
+    pub use crate::system::{ IntoSystem, In, Local };
+
+    #[doc(inline)]
+    pub use crate::schedule::system::{ IntoScheduledSystemConfig, IntoConditionallyScheduledSystemConfig };
 
 }

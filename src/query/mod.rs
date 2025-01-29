@@ -29,7 +29,7 @@ pub unsafe trait Query : Sized {
     type State = ();
 
     /// TODO: Doc comments
-    async fn init_state<'world>(world : &'world World) -> Self::State;
+    fn init_state(world : &World) -> Self::State; // TODO: Get rid of the lifetime on this method.
 
     /// TODO: Doc comments
     ///

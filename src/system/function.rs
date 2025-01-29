@@ -25,22 +25,22 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         type System = FunctionSystem<Self, (), ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
 
         #[track_caller]
-        async fn into_system<'world>(self, world : &'world World) -> Self::System {
+        fn into_system(self, world : &World) -> Self::System {
             <( $( $generic , )* )>::validate().panic_on_violation();
             $( let $generic = <$generic as Query>::init_state(world); )*
             FunctionSystem {
                 function     : self,
-                query_states : multijoin!( $( $generic , )* ),
+                query_states : ( $( $generic , )* ),
                 marker       : PhantomData
             }
         }
 
         #[track_caller]
-        async unsafe fn into_system_unchecked<'world>(self, world : &'world World) -> Self::System {
+        unsafe fn into_system_unchecked(self, world : &World) -> Self::System {
             $( let $generic = <$generic as Query>::init_state(world); )*
             FunctionSystem {
                 function     : self,
-                query_states : multijoin!( $( $generic , )* ),
+                query_states : ( $( $generic , )* ),
                 marker       : PhantomData
             }
         }
@@ -69,22 +69,22 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         type System = FunctionSystem<Self, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
 
         #[track_caller]
-        async fn into_system<'world>(self, world : &'world World) -> Self::System {
+        fn into_system(self, world : &World) -> Self::System {
             <( $( $generic , )* )>::validate().panic_on_violation();
             $( let $generic = <$generic as Query>::init_state(world); )*
             FunctionSystem {
                 function     : self,
-                query_states : multijoin!( $( $generic , )* ),
+                query_states : ( $( $generic , )* ),
                 marker       : PhantomData
             }
         }
 
         #[track_caller]
-        async unsafe fn into_system_unchecked<'world>(self, world : &'world World) -> Self::System {
+        unsafe fn into_system_unchecked(self, world : &World) -> Self::System {
             $( let $generic = <$generic as Query>::init_state(world); )*
             FunctionSystem {
                 function     : self,
-                query_states : multijoin!( $( $generic , )* ),
+                query_states : ( $( $generic , )* ),
                 marker       : PhantomData
             }
         }

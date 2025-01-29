@@ -86,7 +86,7 @@ impl ResourceStorage {
         Some(unsafe{ lock.into_inner().await.read() })
     }
 
-    /// Acquires a read lock to a [`ResourceCell`] by [`ComponentBundle`], if it exists.
+    /// Acquires a read lock to a [`ResourceCell`] by [`Resource`] type, if it exists.
     pub async fn get_ref<R : Resource + 'static>(&self) -> Option<ResourceCellReadGuard<'_, R>> {
         let raw = self.raw.read().await;
         let lock = raw.resources.get(&TypeId::of::<R>())?;
@@ -96,7 +96,7 @@ impl ResourceStorage {
         })
     }
 
-    /// Acquires a write lock to a [`ResourceCell`] by [`ComponentBundle`], if it exists.
+    /// Acquires a write lock to a [`ResourceCell`] by [`Resource`] type, if it exists.
     pub async fn get_mut<R : Resource + 'static>(&self) -> Option<ResourceCellWriteGuard<'_, R>> {
         let raw = self.raw.read().await;
         let lock = raw.resources.get(&TypeId::of::<R>())?;

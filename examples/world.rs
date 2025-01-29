@@ -17,9 +17,9 @@ struct MyComponentTwo {
 async fn main() {
     let world = World::new();
 
-    let mut query_my_components = world.query_mut::<(Entities<(&mut MyComponentOne), With<MyComponentTwo>>)>().await;
+    let mut query_my_components = world.query_mut::<(Entities<(&mut MyComponentOne), With<MyComponentTwo>>)>();
 
-    let mut print_my_components = world.system(print_my_components).await;
+    let mut print_my_components = world.system(print_my_components);
 
 
     // Spawn some entities.

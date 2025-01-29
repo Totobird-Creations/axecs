@@ -116,53 +116,53 @@ impl World {
 
     /// TODO: Doc comments
     #[track_caller]
-    pub async fn query<Q : ReadOnlyQuery>(&self) -> PersistentQueryState<'_, Q> {
+    pub fn query<Q : ReadOnlyQuery>(&self) -> PersistentQueryState<'_, Q> {
         Q::validate().panic_on_violation();
-        unsafe{ self.query_unchecked::<Q>() }.await
+        unsafe{ self.query_unchecked::<Q>() }
     }
 
     /// TODO: Doc comments
-    pub async unsafe fn query_unchecked<Q : ReadOnlyQuery>(&self) -> PersistentQueryState<'_, Q> {
-        unsafe{ PersistentQueryState::<Q>::new(self) }.await
+    pub unsafe fn query_unchecked<Q : ReadOnlyQuery>(&self) -> PersistentQueryState<'_, Q> {
+        unsafe{ PersistentQueryState::<Q>::new(self) }
     }
 
     /// TODO: Doc comments
     #[track_caller]
-    pub async fn query_mut<Q : Query>(&self) -> PersistentQueryState<'_, Q> {
+    pub fn query_mut<Q : Query>(&self) -> PersistentQueryState<'_, Q> {
         Q::validate().panic_on_violation();
-        unsafe{ self.query_unchecked_mut::<Q>() }.await
+        unsafe{ self.query_unchecked_mut::<Q>() }
     }
 
     /// TODO: Doc comments
-    pub async unsafe fn query_unchecked_mut<Q : Query>(&self) -> PersistentQueryState<'_, Q> {
-        unsafe{ PersistentQueryState::<Q>::new(self) }.await
+    pub unsafe fn query_unchecked_mut<Q : Query>(&self) -> PersistentQueryState<'_, Q> {
+        unsafe{ PersistentQueryState::<Q>::new(self) }
     }
 
 
     /// TODO: Doc comments
     #[track_caller]
-    pub async fn system<S : IntoReadOnlySystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return>
+    pub fn system<S : IntoReadOnlySystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return>
     where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return>
     {
-        unsafe{ PersistentSystemState::new(self, system.into_system(self).await) }
+        unsafe{ PersistentSystemState::new(self, system.into_system(self)) }
     }
 
     /// TODO: Doc comments
-    pub async fn system_unchecked<S : IntoReadOnlySystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return>
+    pub fn system_unchecked<S : IntoReadOnlySystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return>
     where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return>
     {
-        unsafe{ PersistentSystemState::new(self, system.into_system_unchecked(self).await) }
+        unsafe{ PersistentSystemState::new(self, system.into_system_unchecked(self)) }
     }
 
     /// TODO: Doc comments
     #[track_caller]
-    pub async fn system_mut<S : IntoSystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return> {
-        unsafe{ PersistentSystemState::new(self, system.into_system(self).await) }
+    pub fn system_mut<S : IntoSystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return> {
+        unsafe{ PersistentSystemState::new(self, system.into_system(self)) }
     }
 
     /// TODO: Doc comments
-    pub async fn system_unchecked_mut<S : IntoSystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return> {
-        unsafe{ PersistentSystemState::new(self, system.into_system_unchecked(self).await) }
+    pub fn system_unchecked_mut<S : IntoSystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return> {
+        unsafe{ PersistentSystemState::new(self, system.into_system_unchecked(self)) }
     }
 
 }

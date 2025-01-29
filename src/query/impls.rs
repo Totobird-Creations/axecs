@@ -3,7 +3,6 @@
 
 use crate::world::World;
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryValidator };
-use crate::util::future::multijoin;
 use crate::util::variadic::variadic_no_unit;
 use core::task::Poll;
 
@@ -11,7 +10,7 @@ use core::task::Poll;
 unsafe impl Query for () {
     type Item<'world, 'state> = ();
 
-    async fn init_state<'world>(_world : &'world World) -> Self::State { () }
+    fn init_state(_world : &World) -> Self::State { () }
 
     unsafe fn acquire<'world, 'state>(_world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
         Poll::Ready(QueryAcquireResult::Ready(()))
@@ -29,8 +28,8 @@ unsafe impl<Q : Query> Query for Option<Q> {
     type Item<'world, 'state> = Option<<Q as Query>::Item<'world, 'state>>;
     type State = <Q as Query>::State;
 
-    async fn init_state<'world>(world : &'world World) -> Self::State {
-        <Q as Query>::init_state(world).await
+    fn init_state(world : &World) -> Self::State {
+        <Q as Query>::init_state(world)
     }
 
     unsafe fn acquire<'world, 'state>(world : &'world World, state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
@@ -60,9 +59,9 @@ macro impl_query_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) {
         type Item<'world, 'state> = ( $( <$generic as Query>::Item<'world, 'state> , )* );
         type State = ( $( <$generic as Query>::State , )* );
 
-        async fn init_state<'world>(world : &'world World) -> Self::State {
+        fn init_state(world : &World) -> Self::State {
             $( let $generic = <$generic as Query>::init_state(world); )*
-            multijoin!( $( $generic , )* )
+            ( $( $generic , )* )
         }
 
         unsafe fn acquire<'world, 'state>(world : &'world World, state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {

@@ -20,6 +20,7 @@ pub use param::*;
 use crate::world::World;
 use core::ops::AsyncFnMut;
 use core::marker::PhantomData;
+use alloc::boxed::Box;
 
 
 /// TODO: Doc comment
@@ -45,10 +46,10 @@ pub trait IntoSystem<Params, Return> : Sized {
     type System : System<Return>;
 
     /// TODO: Doc comment
-    async fn into_system<'world>(self, world : &'world World) -> Self::System;
+    fn into_system(self, world : &World) -> Self::System;
 
     /// TODO: Doc comment
-    async unsafe fn into_system_unchecked<'world>(self, world : &'world World) -> Self::System;
+    unsafe fn into_system_unchecked(self, world : &World) -> Self::System;
 
     /// TODO: Doc comment
     fn pipe<'l, B, BParams, BReturn>(self, into : B)
@@ -90,6 +91,22 @@ where <Self as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return>
 
 /// TODO: Doc comment
 pub trait SystemPassable { }
+
+
+/// TODO: Doc comment
+pub unsafe trait TypeEraseableSystem<Passed : SystemPassable, Return> {
+
+    /// TODO: Doc comment
+    unsafe fn acquire_and_run<'l>(&'l mut self, passed : Passed, world : &'l World) -> Box<dyn Future<Output = Return> + 'l>;
+
+}
+
+unsafe impl<S : System<Return, Passed = Passed>, Passed : SystemPassable, Return : 'static> TypeEraseableSystem<Passed, Return> for S {
+    unsafe fn acquire_and_run<'l>(&'l mut self, passed : Passed, world : &'l World) -> Box<dyn Future<Output = Return> + 'l> {
+        // SAFETY: TODO
+        Box::new(unsafe{ <Self as System<_>>::acquire_and_run(self, passed, world) })
+    }
+}
 
 
 

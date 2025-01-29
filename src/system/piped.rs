@@ -38,20 +38,20 @@ where   A         : IntoSystem<AParams, BPassed>,
     type System = PipedSystem<APassed, A::System, BPassed, B::System, Return>;
 
     #[track_caller]
-    async fn into_system<'world>(self, world : &'world World) -> Self::System {
+    fn into_system(self, world : &World) -> Self::System {
         PipedSystem {
-            a : self.a.into_system(world).await,
-            b : self.b.into_system(world).await,
+            a : self.a.into_system(world),
+            b : self.b.into_system(world),
             marker_a : PhantomData,
             marker_b : PhantomData
         }
     }
 
     #[track_caller]
-    async unsafe fn into_system_unchecked<'world>(self, world : &'world World) -> Self::System {
+    unsafe fn into_system_unchecked(self, world : &World) -> Self::System {
         PipedSystem {
-            a : unsafe{ self.a.into_system_unchecked(world) }.await,
-            b : unsafe{ self.b.into_system_unchecked(world) }.await,
+            a : unsafe{ self.a.into_system_unchecked(world) },
+            b : unsafe{ self.b.into_system_unchecked(world) },
             marker_a : PhantomData,
             marker_b : PhantomData
         }

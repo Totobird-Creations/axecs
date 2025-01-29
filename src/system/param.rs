@@ -35,7 +35,7 @@ unsafe impl<'l, T : Default + 'static> Query for Local<'l, T> {
 
     type State = T;
 
-    async fn init_state<'world>(_world : &'world World) -> Self::State {
+    fn init_state(_world : &World) -> Self::State {
         <T as Default>::default()
     }
 

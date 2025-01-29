@@ -24,10 +24,10 @@ impl<'world, Q : Query> PersistentQueryState<'world, Q> {
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`Query`] does not violate the borrow checker rules. See [`QueryValidator`](crate::query::QueryValidator).
-    pub(crate) async unsafe fn new(world : &'world World) -> Self {
+    pub(crate) unsafe fn new(world : &'world World) -> Self {
         Self {
             world,
-            state : Q::init_state(world).await
+            state : Q::init_state(world)
         }
     }
 
