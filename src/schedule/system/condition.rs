@@ -9,7 +9,7 @@ use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
 pub unsafe trait IntoConditionSystemConfig<Params> {
 
     /// TODO: Doc comment
-    fn into_condition_system_config(self, world : &World) -> ConditionSystemConfig<impl System<bool>>;
+    fn into_condition_system_config(self) -> ConditionSystemConfig<impl System<bool, Passed = ()>>;
 
     // TODO: not
 
@@ -29,23 +29,23 @@ pub unsafe trait IntoConditionSystemConfig<Params> {
 
 
 /// TODO: Doc comment
-pub struct ConditionSystemConfig<C : System<bool>> {
-    pub(crate) run : C
+pub struct ConditionSystemConfig<C : System<bool, Passed = ()>> {
+    pub(super) run : C
 }
 
-unsafe impl<C : System<bool>> IntoConditionSystemConfig<()> for ConditionSystemConfig<C> {
-    fn into_condition_system_config(self, _world : &World) -> ConditionSystemConfig<impl System<bool>> {
+unsafe impl<C : System<bool, Passed = ()>> IntoConditionSystemConfig<()> for ConditionSystemConfig<C> {
+    fn into_condition_system_config(self) -> ConditionSystemConfig<impl System<bool, Passed = ()>> {
         self
     }
 }
 
 
-unsafe impl<Params, C : IntoReadOnlySystem<Params, bool>> IntoConditionSystemConfig<Params> for C
+unsafe impl<Params, C : IntoReadOnlySystem<Params, bool, System = C1>, C1 : System<bool, Passed = ()>> IntoConditionSystemConfig<Params> for C
 where <Self as IntoSystem<Params, bool>>::System : ReadOnlySystem<bool>
 {
-    fn into_condition_system_config(self, world : &World) -> ConditionSystemConfig<impl System<bool>> {
+    fn into_condition_system_config(self) -> ConditionSystemConfig<impl System<bool, Passed = ()>> {
         ConditionSystemConfig {
-            run : <C as IntoSystem<_, _>>::into_system(self, world)
+            run : <C as IntoSystem<_, _>>::into_system(self)
         }
     }
 }

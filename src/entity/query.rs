@@ -58,7 +58,7 @@ impl<Q : ComponentQuery, F : ComponentFilter> Entities<'_, Q, F> {
 unsafe impl<Q : ComponentQuery + 'static, F : ComponentFilter> Query for Entities<'_, Q, F> {
     type Item<'world, 'state> = Entities<'world, Q, F>;
 
-    fn init_state(_world : &World) -> Self::State { () }
+    fn init_state() -> Self::State { () }
 
     unsafe fn acquire<'world, 'state>(world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
         // SAFETY: TODO

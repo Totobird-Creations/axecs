@@ -25,9 +25,9 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         type System = FunctionSystem<Self, (), ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
 
         #[track_caller]
-        fn into_system(self, world : &World) -> Self::System {
+        fn into_system(self) -> Self::System {
             <( $( $generic , )* )>::validate().panic_on_violation();
-            $( let $generic = <$generic as Query>::init_state(world); )*
+            $( let $generic = <$generic as Query>::init_state(); )*
             FunctionSystem {
                 function     : self,
                 query_states : ( $( $generic , )* ),
@@ -36,8 +36,8 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         }
 
         #[track_caller]
-        unsafe fn into_system_unchecked(self, world : &World) -> Self::System {
-            $( let $generic = <$generic as Query>::init_state(world); )*
+        unsafe fn into_system_unchecked(self) -> Self::System {
+            $( let $generic = <$generic as Query>::init_state(); )*
             FunctionSystem {
                 function     : self,
                 query_states : ( $( $generic , )* ),
@@ -69,9 +69,9 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         type System = FunctionSystem<Self, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
 
         #[track_caller]
-        fn into_system(self, world : &World) -> Self::System {
+        fn into_system(self) -> Self::System {
             <( $( $generic , )* )>::validate().panic_on_violation();
-            $( let $generic = <$generic as Query>::init_state(world); )*
+            $( let $generic = <$generic as Query>::init_state(); )*
             FunctionSystem {
                 function     : self,
                 query_states : ( $( $generic , )* ),
@@ -80,8 +80,8 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         }
 
         #[track_caller]
-        unsafe fn into_system_unchecked(self, world : &World) -> Self::System {
-            $( let $generic = <$generic as Query>::init_state(world); )*
+        unsafe fn into_system_unchecked(self) -> Self::System {
+            $( let $generic = <$generic as Query>::init_state(); )*
             FunctionSystem {
                 function     : self,
                 query_states : ( $( $generic , )* ),

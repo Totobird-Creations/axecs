@@ -27,7 +27,7 @@ impl<'world, Q : Query> PersistentQueryState<'world, Q> {
     pub(crate) unsafe fn new(world : &'world World) -> Self {
         Self {
             world,
-            state : Q::init_state(world)
+            state : Q::init_state()
         }
     }
 

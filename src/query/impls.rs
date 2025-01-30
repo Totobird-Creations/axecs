@@ -10,7 +10,7 @@ use core::task::Poll;
 unsafe impl Query for () {
     type Item<'world, 'state> = ();
 
-    fn init_state(_world : &World) -> Self::State { () }
+    fn init_state() -> Self::State { () }
 
     unsafe fn acquire<'world, 'state>(_world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
         Poll::Ready(QueryAcquireResult::Ready(()))
@@ -28,8 +28,8 @@ unsafe impl<Q : Query> Query for Option<Q> {
     type Item<'world, 'state> = Option<<Q as Query>::Item<'world, 'state>>;
     type State = <Q as Query>::State;
 
-    fn init_state(world : &World) -> Self::State {
-        <Q as Query>::init_state(world)
+    fn init_state() -> Self::State {
+        <Q as Query>::init_state()
     }
 
     unsafe fn acquire<'world, 'state>(world : &'world World, state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
@@ -59,8 +59,8 @@ macro impl_query_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) {
         type Item<'world, 'state> = ( $( <$generic as Query>::Item<'world, 'state> , )* );
         type State = ( $( <$generic as Query>::State , )* );
 
-        fn init_state(world : &World) -> Self::State {
-            $( let $generic = <$generic as Query>::init_state(world); )*
+        fn init_state() -> Self::State {
+            $( let $generic = <$generic as Query>::init_state(); )*
             ( $( $generic , )* )
         }
 

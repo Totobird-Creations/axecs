@@ -11,6 +11,7 @@ use crate::component::bundle::ComponentBundle;
 use crate::component::archetype::ArchetypeStorage;
 use crate::query::{ Query, ReadOnlyQuery, PersistentQueryState };
 use crate::system::{ IntoSystem, IntoReadOnlySystem, ReadOnlySystem, PersistentSystemState };
+use crate::schedule::system::TypeErasedSystem;
 
 
 /// TODO: Doc comments
@@ -144,25 +145,30 @@ impl World {
     pub fn system<S : IntoReadOnlySystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return>
     where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return>
     {
-        unsafe{ PersistentSystemState::new(self, system.into_system(self)) }
+        unsafe{ PersistentSystemState::new(self, system.into_system()) }
     }
 
     /// TODO: Doc comments
     pub fn system_unchecked<S : IntoReadOnlySystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return>
     where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return>
     {
-        unsafe{ PersistentSystemState::new(self, system.into_system_unchecked(self)) }
+        unsafe{ PersistentSystemState::new(self, system.into_system_unchecked()) }
     }
 
     /// TODO: Doc comments
     #[track_caller]
     pub fn system_mut<S : IntoSystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return> {
-        unsafe{ PersistentSystemState::new(self, system.into_system(self)) }
+        unsafe{ PersistentSystemState::new(self, system.into_system()) }
     }
 
     /// TODO: Doc comments
     pub fn system_unchecked_mut<S : IntoSystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return> {
-        unsafe{ PersistentSystemState::new(self, system.into_system_unchecked(self)) }
+        unsafe{ PersistentSystemState::new(self, system.into_system_unchecked()) }
+    }
+
+    /// TODO: Doc comments
+    pub(crate) async unsafe fn run_erased_system<Passed, Return>(&self, system : &mut dyn TypeErasedSystem<Passed, Return>, passed : Passed) -> Return {
+        unsafe{ system.acquire_and_run(passed, self) }.await
     }
 
 }

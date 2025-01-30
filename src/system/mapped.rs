@@ -38,9 +38,9 @@ where   A         : IntoSystem<AParams, BPassed>,
     type System = MappedSystem<APassed, A::System, BPassed, B, Return>;
 
     #[track_caller]
-    fn into_system(self, world : &World) -> Self::System {
+    fn into_system(self) -> Self::System {
         MappedSystem {
-            a : self.a.into_system(world),
+            a : self.a.into_system(),
             b : self.b,
             marker_a : PhantomData,
             marker_b : PhantomData
@@ -48,9 +48,10 @@ where   A         : IntoSystem<AParams, BPassed>,
     }
 
     #[track_caller]
-    unsafe fn into_system_unchecked(self, world : &World) -> Self::System {
+    unsafe fn into_system_unchecked(self) -> Self::System {
         MappedSystem {
-            a : unsafe{ self.a.into_system_unchecked(world) },
+            // SAFETY: TODO
+            a : unsafe{ self.a.into_system_unchecked() },
             b : self.b,
             marker_a : PhantomData,
             marker_b : PhantomData

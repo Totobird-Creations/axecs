@@ -29,7 +29,7 @@ pub unsafe trait Query : Sized {
     type State = ();
 
     /// TODO: Doc comments
-    fn init_state(world : &World) -> Self::State; // TODO: Get rid of the lifetime on this method.
+    fn init_state() -> Self::State; // TODO: Get rid of the lifetime on this method.
 
     /// TODO: Doc comments
     ///
@@ -57,6 +57,11 @@ pub unsafe trait Query : Sized {
 
 /// A marker that promises a [`Query`] will not grant mutable or owned access to any values.
 pub unsafe trait ReadOnlyQuery : Query { }
+
+/// TODO: Doc comments
+pub unsafe trait StatelessOnlyQuery : Query { }
+
+unsafe impl<Q : Query<State = ()>> StatelessOnlyQuery for Q { }
 
 
 /// The result of a [`Query`].

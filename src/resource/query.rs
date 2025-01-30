@@ -36,7 +36,7 @@ unsafe impl<'l, R : Resource + 'static> Query for Res<&'l R> {
     type Item<'world, 'state> = Res<&'world R>;
     type State = ();
 
-    fn init_state(_world : &World) -> Self::State { }
+    fn init_state() -> Self::State { }
 
     unsafe fn acquire<'world, 'state>(world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
         match (world.resources().try_read_raw()) {
@@ -82,7 +82,7 @@ unsafe impl<'l, R : Resource + 'static> Query for Res<&'l mut R> {
     type Item<'world, 'state> = Res<&'world mut R>;
     type State = ();
 
-    fn init_state(_world : &World) -> Self::State { }
+    fn init_state() -> Self::State { }
 
     unsafe fn acquire<'world, 'state>(world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
         match (world.resources().try_read_raw()) {
