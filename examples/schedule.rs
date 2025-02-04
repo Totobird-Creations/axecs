@@ -3,18 +3,6 @@ use std::time::Duration;
 use async_std::task::sleep;
 
 
-#[derive(Resource, Debug)]
-struct MyResourceOne {
-    value : usize
-}
-
-
-#[derive(Resource, Debug)]
-struct MyResourceTwo {
-    value : usize
-}
-
-
 #[async_std::main]
 async fn main() {
 
@@ -22,49 +10,59 @@ async fn main() {
 
     app.add_plugin(CycleSchedulerPlugin::default());
 
-    app.insert_resource(MyResourceOne { value : 0 });
-    app.insert_resource(MyResourceTwo { value : 0 });
-
-    app.add_systems(Startup, print_my_values);
-    app.add_systems(Startup, print_hello);
-    app.add_systems(Shutdown, print_goodbye);
-    app.add_systems(Update, increment_one);
-    app.add_systems(Update, increment_two);
+    app.add_systems(PreStartup, pre_startup);
+    app.add_systems(Startup, startup);
+    app.add_systems(Cycle, update);
+    app.add_systems(Shutdown, shutdown);
+    app.add_systems(PostShutdown, post_shutdown);
 
     app.run().await;
 
 }
 
 
-async fn print_my_values(
-        cmds : Commands<'_>,
-        one  : Res<&MyResourceOne>,
-    mut two  : Scoped<'_, Res<&MyResourceTwo>>
+async fn pre_startup() {
+    println!("BEGIN pre_startup");
+    sleep(Duration::from_millis(500)).await;
+    println!("END   pre_startup");
+}
+
+
+async fn startup() {
+    println!("BEGIN startup");
+    for _ in 0..10 {
+        sleep(Duration::from_millis(125)).await;
+        println!("TICK  startup");
+    }
+    println!("END   startup");
+}
+
+
+async fn update(
+    commands : Commands<'_>
 ) {
-    sleep(Duration::from_millis(1)).await;
-    println!("one: {}", one.value);
-    println!("two: {}", two.with(async |w| w.value).await);
-    cmds.exit(AppExit::Ok)
+    println!("BEGIN update");
+    for _ in 0..5 {
+        sleep(Duration::from_millis(125)).await;
+        println!("TICK  update");
+    }
+    println!("END   update");
+    commands.exit(AppExit::Ok);
 }
 
 
-async fn print_hello() {
-    println!("Hello!");
+async fn shutdown() {
+    println!("BEGIN shutdown");
+    for _ in 0..10 {
+        sleep(Duration::from_millis(125)).await;
+        println!("TICK  shutdown");
+    }
+    println!("END   shutdown");
 }
 
-async fn print_goodbye() {
-    println!("Goodbye!");
-}
 
-
-async fn increment_one(
-    mut one : Res<&mut MyResourceOne>
-) {
-    one.value += 1;
-}
-
-async fn increment_two(
-    mut two : Res<&mut MyResourceTwo>
-) {
-    two.value += 1;
+async fn post_shutdown() {
+    println!("BEGIN post_shutdown");
+        sleep(Duration::from_millis(500)).await;
+        println!("END   post_shutdown");
 }

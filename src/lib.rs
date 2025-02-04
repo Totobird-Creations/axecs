@@ -112,7 +112,7 @@ pub mod prelude {
     pub use crate::system::{ IntoSystem, In, Local };
 
     #[doc(inline)]
-    pub use crate::schedule::label::{ Startup, Update, Shutdown };
+    pub use crate::schedule::label::{ PreStartup, Startup, Cycle, Shutdown, PostShutdown };
     #[doc(inline)]
     pub use crate::schedule::system::{ IntoScheduledSystemConfig, IntoConditionallyScheduledSystemConfig };
 

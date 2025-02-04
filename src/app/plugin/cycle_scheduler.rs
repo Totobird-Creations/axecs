@@ -6,7 +6,7 @@ use crate::app::plugin::Plugin;
 use crate::world::World;
 use crate::resource::ResourceStorage;
 use crate::schedule::ScheduleStorage;
-use crate::schedule::label::{ ScheduleLabel, Startup, Update, Shutdown };
+use crate::schedule::label::{ ScheduleLabel, PreStartup,Startup, Cycle, Shutdown, PostShutdown };
 use crate::schedule::system::TypeErasedSystem;
 use crate::util::rwlock::RwLockWriteGuard;
 use crate::util::sparsevec::SparseVec;
@@ -56,32 +56,37 @@ impl CycleSchedulerPlugin {
 struct CycleSchedulerFuture<'l> {
 
     /// TODO: Doc comments
+    state        : CycleSchedulerState,
+
+    /// TODO: Doc comments
     world        : &'l World,
 
     /// TODO: Doc comments
     schedules    : &'l ScheduleStorage,
 
     /// TODO: Doc comments
-    futures      : SparseVec<Pin<Box<dyn Future<Output = ()> + 'l>>>,
+    futures      : SparseVec<Pin<Box<dyn Future<Output = ()> + 'l>>>
 
-    /// TODO: Doc comments
-    shutdown_ran : bool,
+}
 
+enum CycleSchedulerState {
+    Init,
+    PreStartup,
+    Main,
+    Shutdown,
+    PostShutdown
 }
 
 impl<'l> CycleSchedulerFuture<'l> {
 
     /// TODO: Doc comments
     fn new(world : &'l World, schedules : &'l ScheduleStorage) -> Self {
-        let mut scheduler = Self {
+        Self {
+            state     : CycleSchedulerState::Init,
             world,
             schedules,
-            futures      : SparseVec::new(),
-            shutdown_ran : false
-        };
-        scheduler.run_label_oneshot(Startup);
-        scheduler.run_label_cycle(Update);
-        scheduler
+            futures   : SparseVec::new()
+        }
     }
 
     /// TODO: Doc comments
@@ -114,20 +119,53 @@ impl<'l> Future for CycleSchedulerFuture<'l> {
     type Output = AppExit;
 
     fn poll(mut self : Pin<&mut Self>, ctx : &mut Context<'_>) -> Poll<Self::Output> {
-        let is_exiting = self.world.is_exiting();
-
-        if (is_exiting && ! self.shutdown_ran) {
-            self.shutdown_ran = true;
-            self.run_label_oneshot(Shutdown);
-        }
 
         self.futures.retain(|fut| {
             fut.as_mut().poll(ctx).is_pending()
         });
 
-        if (self.futures.is_empty() && is_exiting) {
-            Poll::Ready(self.world.take_exit_status())
-        } else { Poll::Pending }
+        match (self.state) {
+
+            CycleSchedulerState::Init => {
+                self.run_label_oneshot(PreStartup);
+                self.state = CycleSchedulerState::PreStartup;
+                ctx.waker().wake_by_ref();
+            }
+
+            CycleSchedulerState::PreStartup => {
+                if (self.futures.is_empty()) {
+                    self.run_label_oneshot(Startup);
+                    self.run_label_cycle(Cycle);
+                    self.state = CycleSchedulerState::Main;
+                    ctx.waker().wake_by_ref();
+                }
+            },
+
+            CycleSchedulerState::Main => {
+                if (self.world.is_exiting()) {
+                    self.run_label_oneshot(Shutdown);
+                    self.state = CycleSchedulerState::Shutdown;
+                    ctx.waker().wake_by_ref();
+                }
+            },
+
+            CycleSchedulerState::Shutdown => {
+                if (self.futures.is_empty()) {
+                    self.run_label_oneshot(PostShutdown);
+                    self.state = CycleSchedulerState::PostShutdown;
+                    ctx.waker().wake_by_ref();
+                }
+            },
+
+            CycleSchedulerState::PostShutdown => {
+                if (self.futures.is_empty()) {
+                    return Poll::Ready(self.world.take_exit_status())
+                }
+            }
+
+        }
+
+        Poll::Pending
     }
 }
 

@@ -36,6 +36,13 @@ unsafe impl<L : ScheduleLabel + 'static> ScheduleLabelEq for L {
 
 /// TODO: Doc comment
 #[derive(PartialEq, Eq, Clone, Copy)]
+pub struct PreStartup;
+
+impl ScheduleLabel for PreStartup {}
+
+
+/// TODO: Doc comment
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct Startup;
 
 impl ScheduleLabel for Startup {}
@@ -43,9 +50,9 @@ impl ScheduleLabel for Startup {}
 
 /// TODO: Doc comment
 #[derive(PartialEq, Eq, Clone, Copy)]
-pub struct Update;
+pub struct Cycle;
 
-impl ScheduleLabel for Update {}
+impl ScheduleLabel for Cycle {}
 
 
 /// TODO: Doc comment
@@ -53,3 +60,10 @@ impl ScheduleLabel for Update {}
 pub struct Shutdown;
 
 impl ScheduleLabel for Shutdown {}
+
+
+/// TODO: Doc comment
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub struct PostShutdown;
+
+impl ScheduleLabel for PostShutdown {}
