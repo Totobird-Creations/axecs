@@ -6,6 +6,10 @@ use crate::schedule::system::{ ConditionSystemConfig, ConditionNoneMarkerSystem 
 
 
 /// TODO: Doc comment
+/// 
+/// #### Safety
+/// The implementor is responsible for ensuring that this transforms into a valid [`System`].
+/// Queries may not violate the borrow checker rules. See [`QueryValidator`](crate::query::QueryValidator).
 pub unsafe trait IntoScheduledSystemConfig<'l, Params> {
 
     /// TODO: Doc comment

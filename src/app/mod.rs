@@ -1,4 +1,4 @@
-//! TODO: Doc comment
+//! The highest-level API for setting up applications.
 
 
 pub mod plugin;
@@ -18,26 +18,45 @@ use alloc::boxed::Box;
 use alloc::collections::BTreeSet;
 
 
-/// TODO: Doc comment
+/// The primary API for writing applications.
+///
+/// ### Examples
+/// Here is a simple "Hello World" app:
+/// ```rust
+/// use axecs::prelude::*;
+/// # use async_std::main;
+///
+/// #[main]
+/// async fn main() {
+///     let mut app = App::new();
+///     app.add_plugin(CycleSchedulerPlugin);
+///     app.add_systems(Cycle, hello_world_system);
+///     app.run().await;
+/// }
+///
+/// async fn hello_world_system() {
+///     println!("Hello, World!");
+/// }
+/// ```
 pub struct App {
 
-    /// TODO: Doc comment
+    /// [`TypeId`]s of [`Plugin`]s that have already been installed.
     installed_plugins : BTreeSet<TypeId>,
 
-    /// TODO: Doc comment
+    /// The function that is called when [`App::run`] is called.
     runner            : Option<Box<dyn FnOnce(App) -> Pin<Box<dyn Future<Output = AppExit>>>>>,
 
-    /// TODO: Doc comment
+    /// Schedules of [`System`](crate::system::System)s in this [`App`].
     schedules         : Option<ScheduleStorage>,
 
-    /// TODO: Doc comment
+    /// Resources that the [`App`] will start with.
     resources         : Option<RawResourceStorage>
 
 }
 
 impl App {
 
-    /// TODO: Doc comment
+    /// Create an empty [`App`].
     pub fn new() -> Self { Self {
         installed_plugins : BTreeSet::new(),
         runner            : None,
@@ -45,7 +64,18 @@ impl App {
         resources         : Some(RawResourceStorage::new())
     } }
 
-    /// TODO: Doc comment
+    /// Installs a [`Plugin`].
+    ///
+    /// ### Examples
+    /// ```rust
+    /// use axecs::prelude::*;
+    /// 
+    /// let mut app = App::new();
+    /// app.add_plugin(CycleSchedulerPlugin);
+    /// ```
+    ///
+    /// ### Panics
+    /// Panics if a [`Plugin`] of the same type has already been added to this [`App`].
     #[track_caller]
     pub fn add_plugin<P : Plugin + 'static>(&mut self, plugin : P) -> &mut Self {
         if (! self.installed_plugins.insert(TypeId::of::<P>())) {
@@ -55,7 +85,30 @@ impl App {
         self
     }
 
-    /// TODO: Doc comment
+    /// Sets the function that will be called when the [`App`] is run.
+    ///
+    /// A standard runner can be set by adding the [`CycleSchedulerPlugin`](crate::app::plugin::CycleSchedulerPlugin) to the [`App`].
+    ///
+    /// ### Examples
+    /// ```
+    /// use axecs::prelude::*;
+    /// # use async_std::main;
+    /// 
+    /// #[main]
+    /// async fn main() {
+    ///     let mut app = App::new();
+    ///     app.set_runner(run_app);
+    ///     app.run().await;
+    /// }
+    /// 
+    /// async fn run_app(_app : App) -> AppExit {
+    ///     println!("Running App!");
+    ///     AppExit::Ok
+    /// }
+    /// ```
+    ///
+    /// ### Panics
+    /// Panics if a runner function has already been set on this [`App`].
     #[track_caller]
     pub fn set_runner<F : AsyncFnOnce(App) -> AppExit + 'static>(&mut self, runner : F) -> &mut Self {
         if let Some(_) = self.runner {
@@ -65,19 +118,74 @@ impl App {
         self
     }
 
-    /// TODO: Doc comment
+    /// Adds a [`System`](crate::system::System) to the application under some schedule.
+    ///
+    /// ### Examples
+    /// ```rust
+    /// use axecs::prelude::*;
+    /// # use async_std::main;
+    /// 
+    /// #[main]
+    /// async fn main() {
+    ///     let mut app = App::new();
+    ///     app.add_plugin(CycleSchedulerPlugin);
+    ///     app.add_systems(Cycle, hello_world_system);
+    ///     app.run().await;
+    /// }
+    /// 
+    /// async fn hello_world_system() {
+    ///     println!("Hello, World!");
+    /// }
+    /// ```
     pub fn add_systems<L : ScheduleLabel + 'static, S : IntoScheduledSystemConfig<'static, Params>, Params>(&mut self, run_on : L, system : S) -> &mut Self {
         self.schedules.as_mut().expect("App schedules have already been taken").add_systems(run_on, system);
         self
     }
 
-    /// TODO: Doc comment
+    /// Removes the [`ScheduleStorage`] from this [`App`], returning it.
+    /// 
+    /// This is intended for runner functions and likely should not be used otherwise. See [App::set_runner].
+    /// 
+    /// # Panics
+    /// Panics if the schedules have already been taken from this [`App`].
     #[track_caller]
     pub fn take_schedules(&mut self) -> ScheduleStorage {
         mem::replace(&mut self.schedules, None).expect("App schedules have already been taken")
     }
 
-    /// TODO: Doc comment
+    /// Inserts a [`Resource`] into the application world.
+    ///
+    /// ### Examples
+    /// ```rust
+    /// use axecs::prelude::*;
+    /// # use async_std::main;
+    /// 
+    /// #[main]
+    /// async fn main() {
+    ///     let mut app = App::new();
+    ///     app.add_plugin(CycleSchedulerPlugin);
+    ///     app.insert_resource(MyValue {
+    ///         value : 123
+    ///     });
+    ///     app.add_systems(Cycle, tick_my_value);
+    ///     app.run().await;
+    /// }
+    ///
+    /// #[derive(Resource)]
+    /// struct MyValue {
+    ///     value : usize
+    /// }
+    ///
+    /// async fn tick_my_value(
+    ///     mut my_value : Res<&mut MyValue>
+    /// ) {
+    ///     my_value.value += 1;
+    ///     println!("{}", my_value.value);
+    /// }
+    /// ```
+    ///
+    /// ### Panics
+    /// Panics if a [`Resource`] of the same type has already been added to this [`App`].
     #[track_caller]
     pub fn insert_resource<R : Resource + 'static>(&mut self, resource : R) -> &mut Self {
         if (! self.resources.as_mut().expect("App resources have already been taken").insert(resource)) {
@@ -86,13 +194,35 @@ impl App {
         self
     }
 
-    /// TODO: Doc comment
+    /// Removes the [`RawResourceStorage`] from this [`App`], returning it.
+    /// 
+    /// This is intended for runner functions and likely should not be used otherwise. See [App::set_runner].
+    /// 
+    /// # Panics
+    /// Panics if the resources have already been taken from this [`App`].
     #[track_caller]
     pub fn take_resources(&mut self) -> RawResourceStorage {
         mem::replace(&mut self.resources, None).expect("App resources have already been taken")
     }
 
-    /// TODO: Doc comment
+    /// Runs the [`App`].
+    ///
+    /// This can only be run once. Future attempts to run will panic.
+    ///
+    /// ### Examples
+    /// ```rust
+    /// use axecs::prelude::*;
+    /// # use async_std::main;
+    /// 
+    /// #[main]
+    /// async fn main() {
+    ///     let app = App::new();
+    ///     app.run().await;
+    /// }
+    /// ```
+    ///
+    /// ### Panics
+    /// Panics if the no runner function has been set on this [`App`].
     #[track_caller]
     pub async fn run(mut self) -> AppExit {
         let Some(runner) = self.runner.take() else {

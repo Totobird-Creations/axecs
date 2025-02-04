@@ -8,7 +8,7 @@ async fn main() {
 
     let mut app = App::new();
 
-    app.add_plugin(CycleSchedulerPlugin::default());
+    app.add_plugin(CycleSchedulerPlugin);
 
     app.add_systems(PreStartup, pre_startup);
     app.add_systems(Startup, startup);

@@ -15,6 +15,9 @@ use alloc::boxed::Box;
 
 
 /// TODO: Doc comment
+/// 
+/// #### Safety
+/// Do not implement this manually. Instead, implement [`IntoSystem`](crate::system::IntoSystem) or [`System`].
 pub unsafe trait TypeErasedSystem<Passed, Return> {
 
     /// TODO: Doc comment

@@ -20,7 +20,7 @@ async fn main() {
 
     let mut app = App::new();
 
-    app.add_plugin(CycleSchedulerPlugin::default());
+    app.add_plugin(CycleSchedulerPlugin);
 
     app.insert_resource(MyResourceOne { value : 0 });
     app.insert_resource(MyResourceTwo { value : 0 });
