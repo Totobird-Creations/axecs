@@ -9,7 +9,8 @@
     associated_type_defaults,
     impl_trait_in_assoc_type,
     async_fn_track_caller,
-    future_join
+    future_join,
+    map_try_insert
 )]
 #![feature(
     assert_matches,
@@ -21,8 +22,7 @@
 extern crate alloc;
 
 
-// TODO: pub mod app;
-// TODO: pub mod scheduler;
+pub mod app;
 
 pub mod world;
 pub mod resource;
@@ -42,7 +42,17 @@ pub mod util;
 pub mod prelude {
 
     #[doc(inline)]
+    pub use crate::app::App;
+    #[doc(inline)]
+    pub use crate::app::plugin::Plugin;
+    #[doc(inline)]
+    pub use crate::app::plugin::CycleSchedulerPlugin;
+
+    #[doc(inline)]
     pub use crate::world::World;
+
+    #[doc(inline)]
+    pub use crate::resource::Res;
 
     /// Implements [`Resource`](crate::resource::Resource) on an item.
     ///
@@ -87,12 +97,22 @@ pub mod prelude {
     #[doc(cfg(feature = "derive"))]
     pub use axecs_macro::Component;
 
+    /// TODO: Doc comment
+    #[cfg(feature = "derive")]
+    #[doc(cfg(feature = "derive"))]
+    pub use axecs_macro::Bundle;
+
     #[doc(inline)]
     pub use crate::component::query::{ With, Without, And, Nand, Or, Nor, Xor, Xnor };
 
     #[doc(inline)]
+    pub use crate::query::Scoped;
+
+    #[doc(inline)]
     pub use crate::system::{ IntoSystem, In, Local };
 
+    #[doc(inline)]
+    pub use crate::schedule::label::{ Startup, Update, Shutdown };
     #[doc(inline)]
     pub use crate::schedule::system::{ IntoScheduledSystemConfig, IntoConditionallyScheduledSystemConfig };
 

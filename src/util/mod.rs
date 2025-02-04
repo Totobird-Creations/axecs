@@ -5,6 +5,8 @@ pub mod rwlock;
 
 pub(crate) mod either;
 
+pub(crate) mod sparsevec;
+
 
 pub(crate) mod future;
 

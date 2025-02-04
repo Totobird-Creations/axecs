@@ -161,7 +161,7 @@ impl fmt::Display for QueryValidator {
                     // SAFETY: `entry.name` is a value previously generated using `core::any::type_name`.
                     { write!(f, "\n  Already mutably borrowed {}", unsafe{ UnqualifiedTypeName::from_unchecked(entry.name) })?; }
                     #[cfg(not(any(debug_assertions, feature = "keep_debug_names")))]
-                    { write!(f, "\n  Already mutably borrowed item"); }
+                    { write!(f, "\n  Already mutably borrowed item")?; }
                 },
                 QueryValidatorEntryState::OwnedError => {
                     if (! has_errors) {
@@ -172,7 +172,7 @@ impl fmt::Display for QueryValidator {
                     // SAFETY: `entry.name` is a value previously generated using `core::any::type_name`.
                     { write!(f, "\n  Already took ownership of {}", unsafe{ UnqualifiedTypeName::from_unchecked(entry.name) })?; }
                     #[cfg(not(any(debug_assertions, feature = "keep_debug_names")))]
-                    { write!(f, "\n  Already took ownership of item"); }
+                    { write!(f, "\n  Already took ownership of item")?; }
                 },
                 _ => { }
             }

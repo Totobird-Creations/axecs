@@ -9,7 +9,7 @@ pub trait ScheduleLabel : Eq + Clone + Copy { }
 
 
 /// TODO: Doc comment
-pub(super) unsafe trait ScheduleLabelEq {
+pub(crate) unsafe trait ScheduleLabelEq {
 
     /// TODO: Doc comment
     fn schedule_label_eq(&self, other : &dyn ScheduleLabelEq) -> bool;
@@ -39,6 +39,13 @@ unsafe impl<L : ScheduleLabel + 'static> ScheduleLabelEq for L {
 pub struct Startup;
 
 impl ScheduleLabel for Startup {}
+
+
+/// TODO: Doc comment
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub struct Update;
+
+impl ScheduleLabel for Update {}
 
 
 /// TODO: Doc comment

@@ -1,6 +1,10 @@
 //! TODO: Doc comments
 
 
+mod scoped;
+pub use scoped::*;
+
+
 use crate::world::World;
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryValidator };
 use crate::util::variadic::variadic_no_unit;

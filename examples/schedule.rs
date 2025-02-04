@@ -1,69 +1,64 @@
 use axecs::prelude::*;
+use std::time::Duration;
+use async_std::task::sleep;
 
 
-#[derive(Component, Debug)]
-struct MyComponentOne {
+#[derive(Resource, Debug)]
+struct MyResourceOne {
     value : usize
 }
 
 
-#[derive(Component, Debug)]
-struct MyComponentTwo {
-    message : &'static str
+#[derive(Resource, Debug)]
+struct MyResourceTwo {
+    value : usize
 }
 
 
 #[async_std::main]
 async fn main() {
-    let world = World::new();
 
-    let mut query_my_components = world.query_mut::<(Entities<(&mut MyComponentOne), With<MyComponentTwo>>)>();
+    let mut app = App::new();
 
-    let mut print_my_components = world.system(print_my_components);
+    app.add_plugin(CycleSchedulerPlugin::default());
 
+    app.insert_resource(MyResourceOne { value : 0 });
+    app.insert_resource(MyResourceTwo { value : 0 });
 
-    // Spawn some entities.
+    app.add_systems(Startup, print_my_values);
+    app.add_systems(Startup, print_hello);
+    app.add_systems(Update, increment_one);
+    app.add_systems(Update, increment_two);
 
-    world.spawn(()).await;
-
-    world.spawn((
-        MyComponentOne { value : 123 },
-    )).await;
-
-    world.spawn(
-        MyComponentOne { value : 456 }
-    ).await;
-
-    world.spawn((
-        MyComponentTwo { message : "Hello, World!" },
-        MyComponentOne { value : 789 }
-    )).await;
-
-    world.spawn((
-        MyComponentOne { value : 101112 },
-        MyComponentTwo { message : "World, Hello!" }
-    )).await;
-
-
-    // Run a system.
-    print_my_components.run().await;
-
-    // Directly querying the world.
-    for (one) in &mut query_my_components.acquire().await {
-        one.value += 256
-    }
-
-    // Run a system.
-    print_my_components.run().await;
-
+    app.run().await;
 
 }
 
 
-async fn print_my_components(
-    mut label : Local<'_, Option<char>>
+async fn print_hello() {
+    println!("Hello!");
+}
+
+async fn print_my_values(
+        one : Res<&MyResourceOne>,
+    mut two : Scoped<'_, Res<&MyResourceTwo>>
 ) {
-    let next_label = if let Some(label) = *label { ((label as u8) + 1) as char } else { 'A' };
-    println!("{}", next_label);
-    *label = Some(next_label);
+    sleep(Duration::from_millis(1)).await;
+    println!("one: {}", one.value);
+    println!("two: {}", two.with(async |w| w.value).await);
+}
+
+
+async fn increment_one(
+    mut one : Res<&mut MyResourceOne>
+) {
+    //println!("ONE");
+    one.value += 1;
+}
+
+async fn increment_two(
+    mut two : Res<&mut MyResourceTwo>
+) {
+    //println!("TWO");
+    two.value += 1;
 }

@@ -10,28 +10,31 @@ use core::mem::ManuallyDrop;
 use alloc::sync::Arc;
 
 
-/// TODO: Doc comments
+/// A [`RwLock`] which gives up fairness for speed.
 pub struct RwLock<T> {
 
-    /// TODO: Doc comments
+    /// The inner data and lock of this [`RwLock`].
     inner : Arc<RwLockInner<T>>
 
 }
 
-/// TODO: Doc comments
+/// Private types.
 mod __internal {
     use super::*;
 
-    /// TODO: Doc comments
+    /// The inner data and lock of a [`RwLock`].
     pub struct RwLockInner<T> {
 
-        /// TODO: Doc comments
+        /// The inner data.
         pub(super) value          : UnsafeCell<T>,
 
-        /// TODO: Doc comments
+        /// The lock state.
+        /// 
+        /// [`u32::MAX`] means the [`RwLock`] is write-locked.
+        /// Anything below is the number of read locks.
         pub(super) state          : AtomicU32,
 
-        /// TODO: Doc comments
+        /// The number of write-locks that are waiting.
         pub(super) waiting_writes : AtomicU32
 
     }
@@ -41,7 +44,7 @@ use __internal::*;
 
 impl<T> RwLock<T> {
 
-    /// TODO: Doc comments
+    /// Create a new [`RwLock`] with a given value contained.
     pub fn new(value : T) -> Self { Self {
         inner : Arc::new(RwLockInner {
             value          : UnsafeCell::new(value),
@@ -73,15 +76,20 @@ impl<T> Deref for RwLock<T> {
 
 impl<T> RwLock<T> {
 
-    /// TODO: Doc comments
+    /// Returns a [`Future`] which will eventually take ownership of the inner data.
+    /// 
+    /// The [`RwLock`] will be permanently locked.
     pub fn into_inner(self) -> PendingRwLockOwn<T> {
         PendingRwLockOwn { lock : Some(self.inner) }
     }
 
-    /// TODO: Doc comments
+    /// Tries to take ownership of the inner data.
+    /// 
+    /// The [`RwLock`] will be permanently locked if this succeeds.
     pub fn try_into_inner(self) -> Poll<T> {
         self.inner.state.compare_exchange(0, u32::MAX, Ordering::Acquire, Ordering::Relaxed).is_ok()
-            // SAFETY: TODO
+            // SAFETY: Lock state was 0 (no locks), and is now `u32::MAX` (write-locked).
+            //         The lock is never cleared, preventing access to the inner data again.
             .then(|| unsafe{ Arc::into_inner(self.inner).unwrap_unchecked() }.value.into_inner() )
             .map_or(Poll::Pending, |out| Poll::Ready(out))
     }
@@ -90,7 +98,7 @@ impl<T> RwLock<T> {
 
 impl<T> RwLockInner<T> {
 
-    /// TODO: Doc comments
+    /// Tries to obtain a read-lock to the inner data.
     pub fn try_read(self : &Arc<Self>) -> Poll<RwLockReadGuard<T>> {
         if (self.waiting_writes.load(Ordering::Relaxed) > 0) {
             return Poll::Pending;
@@ -104,19 +112,19 @@ impl<T> RwLockInner<T> {
         } else { Poll::Pending }
     }
 
-    /// TODO: Doc comments
+    /// Returns a [`Future`] which will eventually obtain a read-lock to the inner data.
     pub fn read(self : &Arc<Self>) -> PendingRwLockRead<T> {
         PendingRwLockRead { lock : self.clone() }
     }
 
-    /// TODO: Doc comments
+    /// Tries to obtain a write-lock to the inner data.
     pub fn try_write(self : &Arc<Self>) -> Poll<RwLockWriteGuard<T>> {
         self.state.compare_exchange(0, u32::MAX, Ordering::Acquire, Ordering::Relaxed).is_ok()
             .then(|| RwLockWriteGuard { lock : ManuallyDrop::new(self.clone()) })
             .map_or(Poll::Pending, |out| Poll::Ready(out))
     }
 
-    /// TODO: Doc comments
+    /// Returns a [`Future`] which will eventually obtain a write-lock to the inner data.
     pub fn write(self : &Arc<Self>) -> PendingRwLockWrite<T> {
         let _ = self.waiting_writes.fetch_add(1, Ordering::Relaxed);
         PendingRwLockWrite { lock : self.clone() }
@@ -125,7 +133,8 @@ impl<T> RwLockInner<T> {
     /// Returns a write-lock to this [`RwLock`], without checking state or locking.
     ///
     /// # Safety
-    /// The caller is responsible for ensuring the [`RwLock`] is write-locked, but has no locks to it. See [`RwLock::new_writing`].
+    /// The caller is responsible for ensuring the [`RwLock`] is write-locked, but has no guards to it.
+    /// See [`RwLock::new_writing`].
     pub(crate) fn write_unchecked(self : &Arc<Self>) -> RwLockWriteGuard<T> {
         RwLockWriteGuard { lock : ManuallyDrop::new(self.clone()) }
     }

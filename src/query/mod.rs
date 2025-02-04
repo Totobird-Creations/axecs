@@ -2,6 +2,7 @@
 
 
 mod impls;
+pub use impls::Scoped;
 
 mod validate;
 pub use validate::*;

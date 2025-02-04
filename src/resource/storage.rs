@@ -21,7 +21,6 @@ pub struct ResourceStorage {
 
 }
 
-
 /// TODO: Doc comments
 pub struct RawResourceStorage {
 
@@ -30,7 +29,14 @@ pub struct RawResourceStorage {
 
 }
 
+
 impl ResourceStorage {
+
+    /// TODO: Doc comment
+    pub fn new_with(raw : RawResourceStorage) -> Self { Self {
+        raw : RwLock::new(raw)
+    } }
+
 
     /// Attempts to acquire a read lock to the raw data, returning immediately if it can't.
     pub fn try_read_raw(&self) -> Poll<RwLockReadGuard<RawResourceStorage>> {
@@ -46,9 +52,19 @@ impl ResourceStorage {
 
 impl RawResourceStorage {
 
+    /// Creates an empty [`RawResourceStorage`].
+    pub fn new() -> Self { Self {
+        resources : BTreeMap::new()
+    } }
+
     /// Returns an [`Iterator`] over [`RwLock`] wrapped [`ResourceCell`]s.
     pub fn resources(&self) -> impl Iterator<Item = (TypeId, &RwLock<ResourceCell>)> {
         self.resources.iter().map(|(type_id, resource)| (*type_id, resource))
+    }
+
+    /// TODO: Doc comments
+    pub fn insert<R : Resource + 'static>(&mut self, resource : R) -> bool {
+        self.resources.try_insert(TypeId::of::<R>(), RwLock::new(ResourceCell::new(resource))).is_ok()
     }
 
 }

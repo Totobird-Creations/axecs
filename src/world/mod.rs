@@ -11,17 +11,33 @@ use crate::component::bundle::ComponentBundle;
 use crate::component::archetype::ArchetypeStorage;
 use crate::query::{ Query, ReadOnlyQuery, PersistentQueryState };
 use crate::system::{ IntoSystem, IntoReadOnlySystem, ReadOnlySystem, PersistentSystemState };
+use crate::app::AppExit;
 use crate::schedule::system::TypeErasedSystem;
+use core::cell::UnsafeCell;
+use core::mem::MaybeUninit;
+use core::sync::atomic::{ AtomicU8, Ordering };
+use core::hint::unreachable_unchecked;
 
 
 /// TODO: Doc comments
 pub struct World {
 
     /// TODO: Doc comments
-    resources : ResourceStorage,
+    ///
+    /// 0. Not exiting.
+    /// 1. Exiting, status being written.
+    /// 2. Exiting, status exists.
+    /// 3. Exiting, status taken.
+    is_exiting  : AtomicU8,
 
     /// TODO: Doc comments
-    archetypes : ArchetypeStorage
+    exit_status : UnsafeCell<MaybeUninit<AppExit>>,
+
+    /// TODO: Doc comments
+    resources   : ResourceStorage,
+
+    /// TODO: Doc comments
+    archetypes  : ArchetypeStorage
 
 }
 
@@ -46,9 +62,40 @@ impl World {
     /// TODO: Doc comments
     #[inline]
     pub fn new() -> Self { Self {
-        resources  : ResourceStorage::new(),
-        archetypes : ArchetypeStorage::new()
+        is_exiting  : AtomicU8::new(0),
+        exit_status : UnsafeCell::new(MaybeUninit::uninit()),
+        resources   : ResourceStorage::new(),
+        archetypes  : ArchetypeStorage::new()
     } }
+
+    /// TODO: Doc comments
+    #[inline]
+    pub fn new_with(resources : ResourceStorage) -> Self { Self {
+        is_exiting  : AtomicU8::new(0),
+        exit_status : UnsafeCell::new(MaybeUninit::uninit()),
+        resources,
+        archetypes  : ArchetypeStorage::new()
+    } }
+
+
+    /// TODO: Doc comments
+    pub fn is_exiting(&self) -> bool {
+        self.is_exiting.load(Ordering::Relaxed) >= 2
+    }
+
+    /// TODO: Doc comments
+    pub fn take_exit_status(&self) -> AppExit {
+        match (self.is_exiting.compare_exchange(2, 3, Ordering::Acquire, Ordering::Relaxed)) {
+            Ok(_) => {
+                // SAFETY: TODO
+                unsafe{ (*self.exit_status.get()).assume_init_read() }
+            },
+            Err(0) => { panic!("Can not take exit status when app is not exiting") },
+            Err(1) => { panic!("Can not take exit status while app is still writing exit status") },
+            Err(3) => { panic!("Can not take exit status when app exit status has already been taken") }
+            Err(_) => unsafe{ unreachable_unchecked() }
+        }
+    }
 
 
     /// TODO: Doc comments
@@ -167,7 +214,7 @@ impl World {
     }
 
     /// TODO: Doc comments
-    pub(crate) async unsafe fn run_erased_system<Passed, Return>(&self, system : &mut dyn TypeErasedSystem<Passed, Return>, passed : Passed) -> Return {
+    pub async unsafe fn run_erased_system<Passed, Return>(&self, system : &mut dyn TypeErasedSystem<Passed, Return>, passed : Passed) -> Return {
         unsafe{ system.acquire_and_run(passed, self) }.await
     }
 

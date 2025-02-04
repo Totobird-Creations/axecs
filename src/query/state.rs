@@ -5,6 +5,7 @@ use crate::world::World;
 use crate::query::{ Query, QueryAcquireResult };
 use core::pin::Pin;
 use core::task::{ Context, Poll };
+use core::cell::UnsafeCell;
 
 
 /// TODO: Doc comments
@@ -61,7 +62,7 @@ where 'world : 'state
     world  : &'world World,
 
     /// TODO: Doc comments
-    state  : Option<&'state mut Q::State>
+    state  : UnsafeCell<&'state mut Q::State>
 
 }
 
@@ -76,7 +77,7 @@ impl<'world, 'state, Q : Query> QueryAcquireFuture<'world, 'state, Q>
     /// The caller is responsible for ensuring that the given [`Query`] does not violate the borrow checker rules. See [`QueryValidator`](crate::query::QueryValidator).
     pub unsafe fn new(world : &'world World, state : &'state mut Q::State) -> Self { Self {
         world,
-        state : Some(state)
+        state : UnsafeCell::new(state)
     } }
 
 }
@@ -85,7 +86,8 @@ impl<'world, 'state, Q : Query> Future for QueryAcquireFuture<'world, 'state, Q>
 {
     type Output = QueryAcquireResult<Q::Item<'world, 'state>>;
 
-    fn poll(mut self : Pin<&mut Self>, _ctx : &mut Context<'_>) -> Poll<Self::Output> {
-        unsafe{ Q::acquire(self.world, self.state.take().unwrap()) }
+    fn poll(self : Pin<&mut Self>, _ctx : &mut Context<'_>) -> Poll<Self::Output> {
+        // SAFETY: TODO
+        unsafe{ Q::acquire(self.world, &mut*self.state.get()) }
     }
 }
