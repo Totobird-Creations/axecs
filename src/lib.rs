@@ -42,14 +42,14 @@ pub mod util;
 pub mod prelude {
 
     #[doc(inline)]
-    pub use crate::app::App;
+    pub use crate::app::{ App, AppExit };
     #[doc(inline)]
     pub use crate::app::plugin::Plugin;
     #[doc(inline)]
     pub use crate::app::plugin::CycleSchedulerPlugin;
 
     #[doc(inline)]
-    pub use crate::world::World;
+    pub use crate::world::{ World, Commands };
 
     #[doc(inline)]
     pub use crate::resource::Res;

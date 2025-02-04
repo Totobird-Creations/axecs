@@ -27,6 +27,7 @@ async fn main() {
 
     app.add_systems(Startup, print_my_values);
     app.add_systems(Startup, print_hello);
+    app.add_systems(Shutdown, print_goodbye);
     app.add_systems(Update, increment_one);
     app.add_systems(Update, increment_two);
 
@@ -35,30 +36,35 @@ async fn main() {
 }
 
 
-async fn print_hello() {
-    println!("Hello!");
-}
-
 async fn print_my_values(
-        one : Res<&MyResourceOne>,
-    mut two : Scoped<'_, Res<&MyResourceTwo>>
+        cmds : Commands<'_>,
+        one  : Res<&MyResourceOne>,
+    mut two  : Scoped<'_, Res<&MyResourceTwo>>
 ) {
     sleep(Duration::from_millis(1)).await;
     println!("one: {}", one.value);
     println!("two: {}", two.with(async |w| w.value).await);
+    cmds.exit(AppExit::Ok)
+}
+
+
+async fn print_hello() {
+    println!("Hello!");
+}
+
+async fn print_goodbye() {
+    println!("Goodbye!");
 }
 
 
 async fn increment_one(
     mut one : Res<&mut MyResourceOne>
 ) {
-    //println!("ONE");
     one.value += 1;
 }
 
 async fn increment_two(
     mut two : Res<&mut MyResourceTwo>
 ) {
-    //println!("TWO");
     two.value += 1;
 }

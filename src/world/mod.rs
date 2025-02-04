@@ -16,7 +16,6 @@ use crate::schedule::system::TypeErasedSystem;
 use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 use core::sync::atomic::{ AtomicU8, Ordering };
-use core::hint::unreachable_unchecked;
 
 
 /// TODO: Doc comments
@@ -90,10 +89,33 @@ impl World {
                 // SAFETY: TODO
                 unsafe{ (*self.exit_status.get()).assume_init_read() }
             },
-            Err(0) => { panic!("Can not take exit status when app is not exiting") },
-            Err(1) => { panic!("Can not take exit status while app is still writing exit status") },
+            Err(1) => { panic!("Can not take exit status while app is writing exit status") },
             Err(3) => { panic!("Can not take exit status when app exit status has already been taken") }
-            Err(_) => unsafe{ unreachable_unchecked() }
+            Err(_) => { panic!("Can not take exit status when app is not exiting") }
+        }
+    }
+
+    /// TODO: Doc comments
+    pub fn exit(&self, status : AppExit) {
+        match (self.is_exiting.compare_exchange(0, 1, Ordering::Acquire, Ordering::Relaxed)) {
+            Ok(_) => {
+                // SAFETY: TODO
+                unsafe{ (*self.exit_status.get()).write(status); }
+                self.is_exiting.store(2, Ordering::Relaxed);
+            },
+            Err(_) => { panic!("Can not exit already exited app") }
+        }
+    }
+
+    /// TODO: Doc comments
+    pub fn try_exit(&self, status : AppExit) {
+        match (self.is_exiting.compare_exchange(0, 1, Ordering::Acquire, Ordering::Relaxed)) {
+            Ok(_) => {
+                // SAFETY: TODO
+                unsafe{ (*self.exit_status.get()).write(status); }
+                self.is_exiting.store(2, Ordering::Relaxed);
+            },
+            Err(_) => { }
         }
     }
 

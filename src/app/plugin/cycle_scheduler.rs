@@ -177,12 +177,12 @@ impl<'l> Future for SystemCycleFuture<'l> {
     fn poll(mut self : Pin<&mut Self>, ctx : &mut Context<'_>) -> Poll<Self::Output> {
         // SAFETY: TODO
         if let Poll::Ready(_) = unsafe{ self.future.assume_init_mut() }.as_mut().poll(ctx) {
+            ctx.waker().wake_by_ref();
             let world = self.world;
             if (world.is_exiting()) { return Poll::Ready(()); }
             // SAFETY: TODO
             let system = unsafe{ &mut*self.system.get() }.as_mut();
             self.future.write(Box::pin(Self::cycle(world, system)));
-            ctx.waker().wake_by_ref();
         };
         Poll::Pending
     }

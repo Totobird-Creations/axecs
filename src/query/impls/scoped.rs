@@ -43,6 +43,7 @@ impl<'l, Q : Query> Scoped<'l, Q> {
 
 
 unsafe impl<'l, Q : Query> Query for Scoped<'l, Q> {
+
     type Item<'world, 'state> = Scoped<'world, Q>;
 
     type State = ();
