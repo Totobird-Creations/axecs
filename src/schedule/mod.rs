@@ -2,7 +2,7 @@
 
 
 pub mod label;
-use label::{ ScheduleLabel, ScheduleLabelEq };
+use label::{ ScheduleLabel, TypeErasedScheduleLabel };
 
 pub mod system;
 
@@ -18,7 +18,7 @@ use alloc::vec;
 pub struct ScheduleStorage {
 
     /// TODO: Doc comment
-    schedules : Vec<(Box<dyn ScheduleLabelEq>, Vec<RwLock<Box<dyn TypeErasedSystem<(), ()>>>>)>
+    schedules : Vec<(Box<dyn TypeErasedScheduleLabel>, Vec<RwLock<Box<dyn TypeErasedSystem<(), ()>>>>)>
 
 }
 
