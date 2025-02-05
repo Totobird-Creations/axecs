@@ -10,6 +10,12 @@ pub use piped::*;
 mod mapped;
 pub use mapped::*;
 
+mod series;
+pub use series::*;
+
+mod parallel;
+pub use parallel::*;
+
 mod state;
 pub use state::*;
 
@@ -18,7 +24,6 @@ pub use param::*;
 
 
 use crate::world::World;
-use core::ops::AsyncFnMut;
 use core::marker::PhantomData;
 
 
@@ -51,7 +56,7 @@ pub trait IntoSystem<Params, Return> : Sized {
     unsafe fn into_system_unchecked(self) -> Self::System;
 
     /// TODO: Doc comment
-    fn pipe<'l, B, BParams, BReturn>(self, into : B)
+    fn pipe<B, BParams, BReturn>(self, into : B)
         -> IntoPipedSystem<<Self::System as System<Return>>::Passed, Self, Params, Return, B, BParams, BReturn>
     where   B            : IntoSystem<BParams, BReturn>,
             Self::System : System<Return>,
@@ -66,9 +71,9 @@ pub trait IntoSystem<Params, Return> : Sized {
     }
 
     /// TODO: Doc comment
-    fn map<'l, B, BParams, BReturn>(self, with : B)
+    fn map<B, BParams, BReturn>(self, with : B)
         -> IntoMappedSystem<<Self::System as System<Return>>::Passed, Self, Params, Return, B, BReturn>
-    where   B            : AsyncFnMut(Return) -> BReturn,
+    where   B            : FnMut(Return) -> BReturn,
             Self::System : System<Return>
     {
         IntoMappedSystem {
@@ -80,6 +85,51 @@ pub trait IntoSystem<Params, Return> : Sized {
     }
 
 }
+
+
+/// TODO: Doc comment
+pub trait IntoUnitSystem<Params> : IntoSystem<Params, ()> {
+
+    /// TODO: Doc comment
+    fn then<B, BParams, BReturn>(self, then : B)
+        -> IntoSeriesSystem<<Self::System as System<()>>::Passed, Self, Params, B, BParams, BReturn>
+    where   B            : IntoSystem<BParams, BReturn>,
+            Self::System : System<()>,
+            B::System    : System<BReturn, Passed = ()>
+    {
+        IntoSeriesSystem {
+            a : self,
+            b : then,
+            marker_a : PhantomData,
+            marker_b : PhantomData
+        }
+    }
+
+}
+
+impl<S : IntoSystem<Params, ()>, Params> IntoUnitSystem<Params> for S { }
+
+
+/// TODO: Doc comment
+pub trait IntoBoolSystem<Params> : IntoSystem<Params, bool> {
+
+    // TODO: not
+
+    // TODO: and
+
+    // TODO: nand
+
+    // TODO: or
+
+    // TODO: nor
+
+    // TODO: xor
+
+    // TODO: xnor
+
+}
+
+impl<S : IntoSystem<Params, bool>, Params> IntoBoolSystem<Params> for S { }
 
 
 /// TODO: Doc comment

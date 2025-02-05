@@ -6,24 +6,10 @@ use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
 
 
 /// TODO: Doc comment
-pub unsafe trait IntoConditionSystemConfig<Params> {
+pub unsafe trait IntoConditionSystemConfig<Params> : Sized {
 
     /// TODO: Doc comment
     fn into_condition_system_config(self) -> ConditionSystemConfig<impl System<bool, Passed = ()>>;
-
-    // TODO: not
-
-    // TODO: and
-
-    // TODO: nand
-
-    // TODO: or
-
-    // TODO: nor
-
-    // TODO: xor
-
-    // TODO: xnor
 
 }
 

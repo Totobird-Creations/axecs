@@ -69,7 +69,7 @@ impl App {
     /// ### Examples
     /// ```rust
     /// use axecs::prelude::*;
-    /// 
+    ///
     /// let mut app = App::new();
     /// app.add_plugin(CycleSchedulerPlugin);
     /// ```
@@ -93,14 +93,14 @@ impl App {
     /// ```
     /// use axecs::prelude::*;
     /// # use async_std::main;
-    /// 
+    ///
     /// #[main]
     /// async fn main() {
     ///     let mut app = App::new();
     ///     app.set_runner(run_app);
     ///     app.run().await;
     /// }
-    /// 
+    ///
     /// async fn run_app(_app : App) -> AppExit {
     ///     println!("Running App!");
     ///     AppExit::Ok
@@ -124,7 +124,7 @@ impl App {
     /// ```rust
     /// use axecs::prelude::*;
     /// # use async_std::main;
-    /// 
+    ///
     /// #[main]
     /// async fn main() {
     ///     let mut app = App::new();
@@ -132,20 +132,20 @@ impl App {
     ///     app.add_systems(Cycle, hello_world_system);
     ///     app.run().await;
     /// }
-    /// 
+    ///
     /// async fn hello_world_system() {
     ///     println!("Hello, World!");
     /// }
     /// ```
-    pub fn add_systems<L : ScheduleLabel + 'static, S : IntoScheduledSystemConfig<'static, Params>, Params>(&mut self, run_on : L, system : S) -> &mut Self {
+    pub fn add_systems<L : ScheduleLabel + 'static, S : IntoScheduledSystemConfig<'static, Params>, Params : 'static>(&mut self, run_on : L, system : S) -> &mut Self {
         self.schedules.as_mut().expect("App schedules have already been taken").add_systems(run_on, system);
         self
     }
 
     /// Removes the [`ScheduleStorage`] from this [`App`], returning it.
-    /// 
+    ///
     /// This is intended for runner functions and likely should not be used otherwise. See [App::set_runner].
-    /// 
+    ///
     /// # Panics
     /// Panics if the schedules have already been taken from this [`App`].
     #[track_caller]
@@ -159,7 +159,7 @@ impl App {
     /// ```rust
     /// use axecs::prelude::*;
     /// # use async_std::main;
-    /// 
+    ///
     /// #[main]
     /// async fn main() {
     ///     let mut app = App::new();
@@ -195,9 +195,9 @@ impl App {
     }
 
     /// Removes the [`RawResourceStorage`] from this [`App`], returning it.
-    /// 
+    ///
     /// This is intended for runner functions and likely should not be used otherwise. See [App::set_runner].
-    /// 
+    ///
     /// # Panics
     /// Panics if the resources have already been taken from this [`App`].
     #[track_caller]
@@ -213,7 +213,7 @@ impl App {
     /// ```rust
     /// use axecs::prelude::*;
     /// # use async_std::main;
-    /// 
+    ///
     /// #[main]
     /// async fn main() {
     ///     let mut app = App::new();

@@ -27,6 +27,9 @@ members = [ "axecs-macro" ]
 path     = "axecs-macro"
 optional = true
 
+[dependencies.paste]
+version = "1.0"
+
 
 [dev-dependencies.async-std]
 version  = "1.13"

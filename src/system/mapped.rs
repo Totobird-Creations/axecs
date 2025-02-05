@@ -3,14 +3,13 @@
 
 use crate::prelude::World;
 use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
-use core::ops::AsyncFnMut;
 use core::marker::PhantomData;
 
 
 /// TODO: Doc comment
 pub struct IntoMappedSystem<APassed, A, AParams, BPassed, B, Return>
 where   A         : IntoSystem<AParams, BPassed>,
-        B         : AsyncFnMut(BPassed) -> Return,
+        B         : FnMut(BPassed) -> Return,
         A::System : System<BPassed, Passed = APassed>
 {
 
@@ -32,7 +31,7 @@ impl<APassed, A, AParams, BPassed, B, Return>
     IntoSystem<(), Return>
     for IntoMappedSystem<APassed, A, AParams, BPassed, B, Return>
 where   A         : IntoSystem<AParams, BPassed>,
-        B         : AsyncFnMut(BPassed) -> Return,
+        B         : FnMut(BPassed) -> Return,
         A::System : System<BPassed, Passed = APassed>
 {
     type System = MappedSystem<APassed, A::System, BPassed, B, Return>;
@@ -64,7 +63,7 @@ unsafe impl<APassed, A, AParams, BPassed, B, Return>
     IntoReadOnlySystem<(), Return>
     for IntoMappedSystem<APassed, A, AParams, BPassed, B, Return>
 where   A         : IntoReadOnlySystem<AParams, BPassed>,
-        B         : AsyncFnMut(BPassed) -> Return,
+        B         : FnMut(BPassed) -> Return,
         A::System : ReadOnlySystem<BPassed, Passed = APassed>
 { }
 
@@ -72,7 +71,7 @@ where   A         : IntoReadOnlySystem<AParams, BPassed>,
 /// TODO: Doc comment
 pub struct MappedSystem<APassed, A, BPassed, B, Return>
 where   A : System<BPassed, Passed = APassed>,
-        B : AsyncFnMut(BPassed) -> Return
+        B : FnMut(BPassed) -> Return
 {
     /// TODO: Doc comment
     a : A,
@@ -92,7 +91,7 @@ impl<APassed, A, BPassed, B, Return>
     System<Return>
     for MappedSystem<APassed, A, BPassed, B, Return>
 where   A : System<BPassed, Passed = APassed>,
-        B : AsyncFnMut(BPassed) -> Return
+        B : FnMut(BPassed) -> Return
 {
     type Passed = APassed;
 
@@ -100,7 +99,7 @@ where   A : System<BPassed, Passed = APassed>,
     async unsafe fn acquire_and_run(&mut self, a_passed : Self::Passed, world : &World) -> Return {
         // SAFETY: TODO
         let b_passed = unsafe{ self.a.acquire_and_run(a_passed, world) }.await;
-        (self.b)(b_passed).await
+        (self.b)(b_passed)
     }
 }
 
@@ -108,5 +107,5 @@ unsafe impl<APassed, A, BPassed, B, Return>
     ReadOnlySystem<Return>
     for MappedSystem<APassed, A, BPassed, B, Return>
 where   A : ReadOnlySystem<BPassed, Passed = APassed>,
-        B : AsyncFnMut(BPassed) -> Return
+        B : FnMut(BPassed) -> Return
 { }

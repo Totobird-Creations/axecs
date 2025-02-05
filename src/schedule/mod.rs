@@ -30,7 +30,7 @@ impl ScheduleStorage {
     } }
 
     /// TODO: Doc comment
-    pub fn add_systems<L : ScheduleLabel + 'static, S : IntoScheduledSystemConfig<'static, Params>, Params>(&mut self, run_on : L, system : S) {
+    pub fn add_systems<L : ScheduleLabel + 'static, S : IntoScheduledSystemConfig<'static, Params>, Params : 'static>(&mut self, run_on : L, system : S) {
         if let Some(systems) = self.schedules.iter_mut().find_map(|(run_on1, systems)| run_on1.schedule_label_eq(&run_on).then(|| systems)) {
             systems.push(RwLock::new(Box::new(system.into_scheduled_system_config())));
         } else {
