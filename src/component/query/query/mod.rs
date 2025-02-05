@@ -27,7 +27,7 @@ pub unsafe trait ComponentQuery {
     /// Returns an [`Iterator`] over the rows in the [`Archetype`]s that this [`ComponentQuery`] matches.
     ///
     /// # Safety
-    /// The caller is responsible for ensuring that this query is a subset of the given [`Archetype`].
+    /// The caller is responsible for ensuring that this query does not violate the borrow checker rules.
     unsafe fn iter_rows_ref<'world>(archetype : &'world Archetype) -> QueryAcquireResult<impl Iterator<Item = Self::Item<'world>>>;
 
     /// Returns an [`Iterator`] over the rows in the [`Archetype`]s that this [`ComponentQuery`] matches.
@@ -35,7 +35,7 @@ pub unsafe trait ComponentQuery {
     /// Implementors will likely have to use [`Archetype::get_column_ptr`] or [`Archetype::get_column_cells_ptr`].
     ///
     /// # Safety
-    /// The caller is responsible for ensuring that this query is a subset of the given [`Archetype`].
+    /// The caller is responsible for ensuring that this query does not violate the borrow checker rules.
     unsafe fn iter_rows_mut<'world>(archetype : &'world Archetype) -> QueryAcquireResult<impl Iterator<Item = Self::ItemMut<'world>>>;
 
     /// Traverses the types in this [`ComponentQuery`], joining them to a [`QueryValidator`].

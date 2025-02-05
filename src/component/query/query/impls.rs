@@ -132,7 +132,7 @@ unsafe impl<C : Component + 'static> ComponentQuery for &mut C {
 }
 
 
-// TODO: Option<Q>
+// TODO: impl<Q : ComponentQuery> ComponentQuery for Option<Q>
 
 
 variadic_no_unit!{ #[doc(fake_variadic)] impl_component_query_for_tuple }

@@ -253,7 +253,10 @@ impl<'l> SystemCycleFuture<'l> {
 
     /// Run the given system one time.
     async fn cycle(world : &'l World, system : &'l mut dyn TypeErasedSystem<(), ()>) {
-        // SAFETY: TODO
+        // SAFETY: `ScheduleStorage::add_systems` is the only way to add systems.
+        //         It takes a value implementing `IntoScheduledSystemConfig`. The
+        //         implementors of `IntoScheduledSystemConfig` are responsible for
+        //         ensuring that this system is valid.
         unsafe{ system.acquire_and_run((), world) }.await;
     }
 

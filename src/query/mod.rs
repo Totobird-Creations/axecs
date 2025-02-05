@@ -15,6 +15,7 @@ use crate::world::World;
 #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
 use crate::util::unqualified::UnqualifiedTypeName;
 use core::task::Poll;
+use core::hint::unreachable_unchecked;
 
 
 /// TODO: Doc comments
@@ -96,6 +97,13 @@ impl<T> QueryAcquireResult<T> {
             QueryAcquireResult::DoesNotExist { } => { panic!("Query requested non-existant item") }
 
         }
+    }
+
+    /// TODO: Doc comments
+    pub unsafe fn unwrap_unchecked(self) -> T {
+        // SAFETY: TODO
+        let Self::Ready(out) = self else { unsafe{ unreachable_unchecked() } };
+        out
     }
 
 }

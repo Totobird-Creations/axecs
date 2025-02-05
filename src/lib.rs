@@ -97,7 +97,29 @@ pub mod prelude {
     #[doc(cfg(feature = "derive"))]
     pub use axecs_macro::Component;
 
-    /// TODO: Doc comment
+    /// Implements [`ComponentBundle`](crate::component::bundle::ComponentBundle) on an item.
+    ///
+    /// #### Examples
+    /// ```rust
+    /// use axecs::prelude::*;
+    ///
+    /// #[derive(Component)]
+    /// struct Health {
+    ///     current : f32,
+    ///     maximum : f32
+    /// }
+    ///
+    /// #[derive(Component)]
+    /// struct AttackDamage {
+    ///     amount : f32
+    /// }
+    ///
+    /// #[derive(Bundle)]
+    /// struct EnemyMob {
+    ///     health : Health,
+    ///     damage : AttackDamage
+    /// }
+    /// ```
     #[cfg(feature = "derive")]
     #[doc(cfg(feature = "derive"))]
     pub use axecs_macro::Bundle;
@@ -115,5 +137,10 @@ pub mod prelude {
     pub use crate::schedule::label::{ PreStartup, Startup, Cycle, Shutdown, PostShutdown };
     #[doc(inline)]
     pub use crate::schedule::system::{ IntoScheduledSystemConfig, IntoConditionallyScheduledSystemConfig };
+
+    /// TODO: Doc comment
+    #[cfg(feature = "derive")]
+    #[doc(cfg(feature = "derive"))]
+    pub use axecs_macro::Label;
 
 }

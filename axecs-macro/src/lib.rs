@@ -128,3 +128,19 @@ pub fn derive_resource(input : TokenStream1) -> TokenStream1 {
         impl #impl_generics ::axecs::resource::Resource for #ident #ty_generics #where_clause { }
     }.into()
 }
+
+
+
+#[proc_macro_derive(Label)]
+pub fn derive_label(input : TokenStream1) -> TokenStream1 {
+    let DeriveInput {
+        ident,
+        generics,
+        ..
+    } = parse_macro_input!(input as DeriveInput);
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+    quote!{
+        impl #impl_generics ::axecs::schedule::label::ScheduleLabel for #ident #ty_generics #where_clause { }
+    }.into()
+}

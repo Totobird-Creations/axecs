@@ -18,8 +18,6 @@ use alloc::vec::Vec;
 
 
 /// A wrapper for several different [`Archetype`]s.
-///
-/// TODO: Example
 pub struct ArchetypeStorage {
 
     /// The raw data of this [`ArchetypeStorage`], behind a [`RwLock`].
@@ -269,23 +267,26 @@ impl ArchetypeStorage {
         entities.into_boxed_slice().into_iter()
     }
 
-    /// TODO: Doc comments
+    /// Removes a row from an [`Archetype`], if it exists.
     pub async fn despawn(&self, entity : Entity) {
         let archetype_id = entity.archetype_id();
         let Some(mut archetype) = FunctionCallFuture::new(|| self.get_mut_by_id(archetype_id)).await else { return };
         let row = entity.archetype_row();
         if (archetype.has_row(row)) {
-            // SAFETY: TODO
+            // SAFETY: It was checked in the line above that the row exists.
             unsafe{ archetype.despawn_unchecked(row); }
         }
     }
 
-    /// TODO: Doc comments
+    /// Resmoves a row from an [`Archetype`] without checking if it exists.
+    /// 
+    /// # Safety:
+    /// The caller is responsible for ensuring that the [`Archetype`] and row exist.
     pub async fn despawn_unchecked(&self, entity : Entity) {
         let archetype_id = entity.archetype_id();
-        // SAFETY: TODO
+        // SAFETY: The caller is responsible for ensuring that the archetype exists.
         let mut archetype = FunctionCallFuture::new(|| unsafe{ self.get_mut_by_id_unchecked(archetype_id) }).await;
-        // SAFETY: TODO
+        // SAFETY: The caller is responsible for ensuring that the row exists.
         unsafe{ archetype.despawn_unchecked(entity.archetype_row()); }
     }
 

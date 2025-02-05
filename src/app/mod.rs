@@ -216,7 +216,8 @@ impl App {
     /// 
     /// #[main]
     /// async fn main() {
-    ///     let app = App::new();
+    ///     let mut app = App::new();
+    ///     app.add_plugin(CycleSchedulerPlugin);
     ///     app.run().await;
     /// }
     /// ```
