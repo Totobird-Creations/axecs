@@ -298,8 +298,8 @@ impl Archetype {
     /// - does not violate the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
     /// - is a **subset** of the components stored in this archetype.
     pub unsafe fn query_unchecked<Q : ReadOnlyComponentQuery>(&self) -> impl Iterator<Item = Q::Item<'_>> {
-        // SAFETY: The caller is responsible for upholding the safety guarantees.
-        unsafe{ Q::iter_rows_ref(self).unwrap() }
+        // SAFETY: TODO
+        self.rows().map(|row| unsafe{ Q::get_row_ref(self, row).unwrap_unchecked() })
     }
 
     /// Returns an [`Iterator`] over the requested columns in this archetype, without checking if the given [`ComponentQuery`] is valid.
@@ -309,10 +309,8 @@ impl Archetype {
     /// - does not violate the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
     /// - is a **subset** of the components stored in this archetype.
     pub unsafe fn query_unchecked_mut<Q : ComponentQuery>(&mut self) -> impl Iterator<Item = Q::ItemMut<'_>> {
-        // SAFETY: The caller is responsible for upholding the safety guarantees.
-        // SAFETY: `self` is borrowed mutably, preventing it from being accessed throughout
-        //         the lifetime of the returned value.
-        unsafe{ Q::iter_rows_mut(self).unwrap() }
+        // SAFETY: TODO
+        self.rows().map(|row| unsafe{ Q::get_row_mut(self, row).unwrap_unchecked() })
     }
 
 }

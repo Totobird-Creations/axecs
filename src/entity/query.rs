@@ -95,7 +95,9 @@ impl<'l, 'k, Q : ComponentQuery, F : ComponentFilter> IntoIterator for &'l Entit
 
     fn into_iter(self) -> Self::IntoIter {
         // SAFETY: TODO
-        self.archetypes.iter().map(|archetype| unsafe{ Q::iter_rows_ref(archetype) }.unwrap()).flatten()
+        self.archetypes.iter().map(|archetype| archetype.rows().map(|row|
+            unsafe{ Q::get_row_ref(archetype, row).unwrap_unchecked() }
+        )).flatten()
     }
 }
 
@@ -106,6 +108,8 @@ impl<'l, 'k, Q : ComponentQuery, F : ComponentFilter> IntoIterator for &'l mut E
 
     fn into_iter(self) -> Self::IntoIter {
         // SAFETY: TODO
-        self.archetypes.iter_mut().map(|archetype| unsafe{ Q::iter_rows_mut(archetype) }.unwrap()).flatten()
+        self.archetypes.iter_mut().map(|archetype| archetype.rows().map(|row|
+            unsafe{ Q::get_row_mut(archetype, row).unwrap_unchecked() }
+        )).flatten()
     }
 }

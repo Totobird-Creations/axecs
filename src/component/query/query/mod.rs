@@ -24,19 +24,23 @@ pub unsafe trait ComponentQuery {
     /// Returns `true` if this [`ComponentQuery`] only requests types in the given [`Archetype`].
     fn is_subset_of_archetype(column_types : &[TypeId]) -> bool;
 
-    /// Returns an [`Iterator`] over the rows in the [`Archetype`]s that this [`ComponentQuery`] matches.
+    /// Gets a row in the [`Archetype`] by row.
     ///
     /// # Safety
-    /// The caller is responsible for ensuring that this query does not violate the borrow checker rules.
-    unsafe fn iter_rows_ref<'world>(archetype : &'world Archetype) -> QueryAcquireResult<impl Iterator<Item = Self::Item<'world>>>;
+    /// The caller is responsible for ensuring that:
+    /// - this query does not violate the borrow checker rules.
+    /// - the given row exists.
+    unsafe fn get_row_ref<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::Item<'world>>;
 
-    /// Returns an [`Iterator`] over the rows in the [`Archetype`]s that this [`ComponentQuery`] matches.
+    /// Gets a row in the [`Archetype`] by row.
     ///
     /// Implementors will likely have to use [`Archetype::get_column_ptr`] or [`Archetype::get_column_cells_ptr`].
     ///
     /// # Safety
-    /// The caller is responsible for ensuring that this query does not violate the borrow checker rules.
-    unsafe fn iter_rows_mut<'world>(archetype : &'world Archetype) -> QueryAcquireResult<impl Iterator<Item = Self::ItemMut<'world>>>;
+    /// The caller is responsible for ensuring that:
+    /// - this query does not violate the borrow checker rules.
+    /// - the given row exists.
+    unsafe fn get_row_mut<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'world>>;
 
     /// Traverses the types in this [`ComponentQuery`], joining them to a [`QueryValidator`].
     ///
