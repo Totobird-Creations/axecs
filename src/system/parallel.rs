@@ -2,7 +2,7 @@
 
 
 use crate::world::World;
-use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
+use crate::system::{ System, ReadOnlySystem, StatelessSystem, IntoSystem, IntoReadOnlySystem, IntoStatelessSystem };
 use crate::util::variadic::variadic_no_unit;
 use core::marker::PhantomData;
 use core::future::join;
@@ -68,6 +68,15 @@ where   A         : IntoReadOnlySystem<AParams, ()>,
         B::System : ReadOnlySystem<(), Passed = ()>
 { }
 
+unsafe impl<A, AParams, B, BParams>
+    IntoStatelessSystem<(), ()>
+    for IntoParallelSystem<A, AParams, B, BParams>
+where   A         : IntoStatelessSystem<AParams, ()>,
+        B         : IntoStatelessSystem<BParams, ()>,
+        A::System : StatelessSystem<(), Passed = ()>,
+        B::System : StatelessSystem<(), Passed = ()>
+{ }
+
 
 /// TODO: Doc comment
 pub struct ParallelSystem<A, B>
@@ -107,6 +116,13 @@ unsafe impl<A, B>
     for ParallelSystem<A, B>
 where   A : ReadOnlySystem<(), Passed = ()>,
         B : ReadOnlySystem<(), Passed = ()>
+{ }
+
+unsafe impl<A, B>
+    StatelessSystem<()>
+    for ParallelSystem<A, B>
+where   A : StatelessSystem<(), Passed = ()>,
+        B : StatelessSystem<(), Passed = ()>
 { }
 
 

@@ -2,7 +2,7 @@
 
 
 use crate::prelude::World;
-use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
+use crate::system::{ System, ReadOnlySystem, StatelessSystem, IntoSystem, IntoReadOnlySystem, IntoStatelessSystem };
 use core::marker::PhantomData;
 
 
@@ -67,6 +67,14 @@ where   A         : IntoReadOnlySystem<AParams, BPassed>,
         A::System : ReadOnlySystem<BPassed, Passed = APassed>
 { }
 
+unsafe impl<APassed, A, AParams, BPassed, B, Return>
+    IntoStatelessSystem<(), Return>
+    for IntoMappedSystem<APassed, A, AParams, BPassed, B, Return>
+where   A         : IntoStatelessSystem<AParams, BPassed>,
+        B         : FnMut(BPassed) -> Return,
+        A::System : StatelessSystem<BPassed, Passed = APassed>
+{ }
+
 
 /// TODO: Doc comment
 pub struct MappedSystem<APassed, A, BPassed, B, Return>
@@ -107,5 +115,12 @@ unsafe impl<APassed, A, BPassed, B, Return>
     ReadOnlySystem<Return>
     for MappedSystem<APassed, A, BPassed, B, Return>
 where   A : ReadOnlySystem<BPassed, Passed = APassed>,
+        B : FnMut(BPassed) -> Return
+{ }
+
+unsafe impl<APassed, A, BPassed, B, Return>
+    StatelessSystem<Return>
+    for MappedSystem<APassed, A, BPassed, B, Return>
+where   A : StatelessSystem<BPassed, Passed = APassed>,
         B : FnMut(BPassed) -> Return
 { }

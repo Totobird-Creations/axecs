@@ -2,8 +2,8 @@
 
 
 use crate::world::World;
-use crate::query::{ Query, ReadOnlyQuery, QueryAcquireFuture };
-use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, SystemPassable };
+use crate::query::{ Query, ReadOnlyQuery, StatelessQuery, QueryAcquireFuture };
+use crate::system::{ System, ReadOnlySystem, StatelessSystem, IntoSystem, IntoReadOnlySystem, IntoStatelessSystem, SystemPassable };
 use crate::util::future::multijoin;
 use crate::util::variadic::variadic;
 use core::ops::AsyncFnMut;
@@ -56,6 +56,15 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         (AsyncFnMut( $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
     { }
 
+    $( #[ $meta ] )*
+    unsafe impl< F, $( $generic : StatelessQuery , )* Return >
+        IntoStatelessSystem<( (), $( $generic , )* ), Return>
+        for F
+    where for<'l, 'world, 'state> &'l mut F:
+        (AsyncFnMut( $( $generic , )* ) -> Return) +
+        (AsyncFnMut( $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
+    { }
+
 
     #[allow(non_snake_case, unused_variables)]
     $( #[ $meta ] )*
@@ -94,6 +103,15 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
     $( #[ $meta ] )*
     unsafe impl< F, Passed : SystemPassable, $( $generic : ReadOnlyQuery , )* Return >
         IntoReadOnlySystem<( Passed, $( $generic , )* ), Return>
+        for F
+    where for<'l, 'world, 'state> &'l mut F:
+        (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
+        (AsyncFnMut( Passed, $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
+    { }
+
+    $( #[ $meta ] )*
+    unsafe impl< F, Passed : SystemPassable, $( $generic : StatelessQuery , )* Return >
+        IntoStatelessSystem<( Passed, $( $generic , )* ), Return>
         for F
     where for<'l, 'world, 'state> &'l mut F:
         (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
@@ -156,6 +174,15 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
         (AsyncFnMut( $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
     { }
 
+    $( #[ $meta ] )*
+    unsafe impl< F, $( $generic : StatelessQuery , )* Return >
+        StatelessSystem<Return>
+        for FunctionSystem<F, (), ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>
+    where for<'l, 'world, 'state> &'l mut F:
+        (AsyncFnMut( $( $generic , )* ) -> Return) +
+        (AsyncFnMut( $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
+    { }
+
 
     #[allow(non_snake_case, unused_variables)]
     $( #[ $meta ] )*
@@ -189,6 +216,15 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
     $( #[ $meta ] )*
     unsafe impl< F, Passed : SystemPassable, $( $generic : ReadOnlyQuery , )* Return >
         ReadOnlySystem<Return>
+        for FunctionSystem<F, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>
+    where for<'l, 'world, 'state> &'l mut F:
+        (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
+        (AsyncFnMut( Passed, $( <$generic as Query>::Item<'world, 'state> , )* ) -> Return)
+    { }
+
+    $( #[ $meta ] )*
+    unsafe impl< F, Passed : SystemPassable, $( $generic : StatelessQuery , )* Return >
+        StatelessSystem<Return>
         for FunctionSystem<F, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>
     where for<'l, 'world, 'state> &'l mut F:
         (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +

@@ -42,6 +42,9 @@ pub trait System<Return> {
 /// TODO: Doc comment
 pub unsafe trait ReadOnlySystem<Return> : System<Return> { }
 
+/// TODO: Doc comment
+pub unsafe trait StatelessSystem<Return> : System<Return> { }
+
 
 /// TODO: Doc comment
 pub trait IntoSystem<Params, Return> : Sized {
@@ -135,6 +138,11 @@ impl<S : IntoSystem<Params, bool>, Params> IntoBoolSystem<Params> for S { }
 /// TODO: Doc comment
 pub unsafe trait IntoReadOnlySystem<Params, Return> : IntoSystem<Params, Return>
 where <Self as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return>
+{ }
+
+/// TODO: Doc comment
+pub unsafe trait IntoStatelessSystem<Params, Return> : IntoSystem<Params, Return>
+where <Self as IntoSystem<Params, Return>>::System : StatelessSystem<Return>
 { }
 
 

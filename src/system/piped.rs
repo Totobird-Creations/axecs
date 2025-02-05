@@ -2,7 +2,7 @@
 
 
 use crate::world::World;
-use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, SystemPassable };
+use crate::system::{ System, ReadOnlySystem, StatelessSystem, IntoSystem, IntoReadOnlySystem, IntoStatelessSystem, SystemPassable };
 use core::marker::PhantomData;
 
 
@@ -69,6 +69,15 @@ where   A         : IntoReadOnlySystem<AParams, BPassed>,
         B::System : ReadOnlySystem<Return, Passed = In<BPassed>>
 { }
 
+unsafe impl<APassed, A, AParams, BPassed, B, BParams, Return>
+    IntoStatelessSystem<(), Return>
+    for IntoPipedSystem<APassed, A, AParams, BPassed, B, BParams, Return>
+where   A         : IntoStatelessSystem<AParams, BPassed>,
+        B         : IntoStatelessSystem<BParams, Return>,
+        A::System : StatelessSystem<BPassed, Passed = APassed>,
+        B::System : StatelessSystem<Return, Passed = In<BPassed>>
+{ }
+
 
 /// TODO: Doc comment
 pub struct PipedSystem<APassed, A, BPassed, B, Return>
@@ -112,6 +121,13 @@ unsafe impl<APassed, A, BPassed, B, Return>
     for PipedSystem<APassed, A, BPassed, B, Return>
 where   A : ReadOnlySystem<BPassed, Passed = APassed>,
         B : ReadOnlySystem<Return, Passed = In<BPassed>>
+{ }
+
+unsafe impl<APassed, A, BPassed, B, Return>
+    StatelessSystem<Return>
+    for PipedSystem<APassed, A, BPassed, B, Return>
+where   A : StatelessSystem<BPassed, Passed = APassed>,
+        B : StatelessSystem<Return, Passed = In<BPassed>>
 { }
 
 

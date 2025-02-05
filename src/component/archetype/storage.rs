@@ -117,7 +117,7 @@ impl ArchetypeStorage {
         }
     }
 
-    /// Tries to acquire a read lock to an [`Archetype`] by ID, without checking if it exists.
+    /// Tries to acquire a read lock to an [`Archetype`] by ID, without checking that it exists.
     ///
     /// # Safety
     /// The caller is responsible for ensuring that this [`ArchetypeStorage`] actually has an [`Archetype`] by this ID.
@@ -217,7 +217,7 @@ impl ArchetypeStorage {
         unsafe{ self.spawn_unchecked::<C>(bundle).await }
     }
 
-    /// Gets the corresponding [`Archetype`] (creating it if needed), then adds a row, "spawning an entity", without checking if the given [`ComponentBundle`] is valid.
+    /// Gets the corresponding [`Archetype`] (creating it if needed), then adds a row, "spawning an entity", without checking that the given [`ComponentBundle`] is valid.
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ComponentBundle`] does not violate the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
@@ -234,11 +234,11 @@ impl ArchetypeStorage {
 
     /// Gets the corresponding [`Archetype`] (creating it if needed), then adds several rows, "spawning" entities.
     ///
+    /// This is more efficient than [`ArchetypeStorage::spawn`], but has the downside of only being able to spawn entities with the same [`ComponentBundle`] type.
+    /// 
     /// # Panics
     /// Panics if the given [`ComponentBundle`]s are not valid.
     /// See [`BundleValidator`](crate::component::bundle::BundleValidator).
-    ///
-    /// This is more efficient than [`ArchetypeStorage::spawn`], but has the downside of only being able to spawn entities with the same [`ComponentBundle`] type.
     #[track_caller]
     pub async fn spawn_batch<C : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = C>) -> impl Iterator<Item = Entity> {
         C::validate().panic_on_violation();
@@ -246,7 +246,7 @@ impl ArchetypeStorage {
         unsafe{ self.spawn_batch_unchecked::<C>(bundles).await }
     }
 
-    /// Gets the corresponding [`Archetype`] (creating it if needed), then adds several rows, "spawning" entities, without checking if the given [`ComponentBundle`] is valid.
+    /// Gets the corresponding [`Archetype`] (creating it if needed), then adds several rows, "spawning" entities, without checking that the given [`ComponentBundle`] is valid.
     ///
     /// This is more efficient than [`ArchetypeStorage::spawn`], but has the downside of only being able to spawn entities with the same [`ComponentBundle`] type.
     ///
@@ -278,7 +278,7 @@ impl ArchetypeStorage {
         }
     }
 
-    /// Resmoves a row from an [`Archetype`] without checking if it exists.
+    /// Resmoves a row from an [`Archetype`] without checking that it exists.
     /// 
     /// # Safety:
     /// The caller is responsible for ensuring that the [`Archetype`] and row exist.
@@ -302,7 +302,7 @@ impl ArchetypeStorage {
         unsafe{ self.query_unchecked::<'l, Q, F>().await }
     }
 
-    /// Returns [`Entities`] that match the given filter, without checking if the given [`ReadOnlyComponentQuery`] is valid.
+    /// Returns [`Entities`] that match the given filter, without checking that the given [`ReadOnlyComponentQuery`] is valid.
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ReadOnlyComponentQuery`] does not violate the borrow checker rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
@@ -323,7 +323,7 @@ impl ArchetypeStorage {
         unsafe{ self.query_unchecked_mut::<'l, Q, F>().await }
     }
 
-    /// Returns [`Entities`] that match the given filter, without checking if the given [`ComponentQuery`] is valid.
+    /// Returns [`Entities`] that match the given filter, without checking that the given [`ComponentQuery`] is valid.
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ComponentQuery`] does not violate the borrow checker rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).

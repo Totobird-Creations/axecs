@@ -61,9 +61,9 @@ pub unsafe trait Query : Sized {
 pub unsafe trait ReadOnlyQuery : Query { }
 
 /// TODO: Doc comments
-pub unsafe trait StatelessOnlyQuery : Query { }
+pub unsafe trait StatelessQuery : Query<State = ()> { }
 
-unsafe impl<Q : Query<State = ()>> StatelessOnlyQuery for Q { }
+unsafe impl<Q : Query<State = ()>> StatelessQuery for Q { }
 
 
 /// The result of a [`Query`].
