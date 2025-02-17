@@ -36,6 +36,13 @@ unsafe impl<L : ScheduleLabel + 'static> TypeErasedScheduleLabel for L {
 }
 
 
+/// TODO: Doc comment
+#[derive(PartialEq, Eq, Clone, Copy)]
+pub struct Always;
+
+impl ScheduleLabel for Always {}
+
+
 /// The schedule that first runs when the app starts.
 ///
 /// All [`PreStartup`] systems must have fully completed before the program can go on to [`Startup`].

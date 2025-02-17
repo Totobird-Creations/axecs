@@ -4,6 +4,9 @@
 mod cycle_scheduler;
 pub use cycle_scheduler::CycleSchedulerPlugin;
 
+mod ctrlc;
+pub use ctrlc::CtrlCPlugin;
+
 
 use crate::app::App;
 

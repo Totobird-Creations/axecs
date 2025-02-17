@@ -6,7 +6,7 @@ use crate::app::plugin::Plugin;
 use crate::world::World;
 use crate::resource::ResourceStorage;
 use crate::schedule::ScheduleStorage;
-use crate::schedule::label::{ ScheduleLabel, PreStartup,Startup, Cycle, Shutdown, PostShutdown };
+use crate::schedule::label::{ ScheduleLabel, Always, PreStartup, Startup, Cycle, Shutdown, PostShutdown };
 use crate::schedule::system::TypeErasedSystem;
 use crate::util::rwlock::RwLockWriteGuard;
 use crate::util::sparsevec::SparseVec;
@@ -19,33 +19,33 @@ use alloc::vec::Vec;
 
 
 /// A good default system scheduler.
-/// 
+///
 /// The cycle scheduler will use [`PreStartup`], [`Startup`], [`Cycle`], [`Shutdown`], and [`PostShutdown`].
 /// See the documentations for each individual label for more details.
-/// 
+///
 /// # Examples
 /// ```rust
 /// use axecs::prelude::*;
 /// # use async_std::main;
-/// 
+///
 /// #[main]
 /// async fn main() {
-/// 
+///
 ///     let mut app = App::new();
-/// 
+///
 ///     app.add_plugin(CycleSchedulerPlugin);
-/// 
+///
 ///     app.add_systems(PreStartup, setup);
 ///     app.add_systems(Cycle, update);
-/// 
+///
 ///     app.run().await;
-/// 
+///
 /// }
-/// 
+///
 /// async fn setup() {
 ///     println!("Hello!");
 /// }
-/// 
+///
 /// async fn update() {
 ///     println!("Tick");
 /// }
@@ -85,22 +85,25 @@ impl CycleSchedulerPlugin {
 struct CycleSchedulerFuture<'l> {
 
     /// The current state of this scheduler.
-    state        : CycleSchedulerState,
+    state          : CycleSchedulerState,
 
     /// The [`World`] to operate on.
-    world        : &'l World,
+    world          : &'l World,
 
     /// The schedules in the app.
-    schedules    : &'l ScheduleStorage,
+    schedules      : &'l ScheduleStorage,
+
+    /// The currently running [`Always`] futures.
+    always_futures : Vec<Pin<Box<dyn Future<Output = ()> + 'l>>>,
 
     /// The currently running futures.
-    futures      : SparseVec<Pin<Box<dyn Future<Output = ()> + 'l>>>
+    futures        : SparseVec<Pin<Box<dyn Future<Output = ()> + 'l>>>
 
 }
 
 /// The current state of this [`CycleSchedulerFuture`].
 enum CycleSchedulerState {
-    
+
     /// This scheduler was just created and needs to be set up.
     /// Switch to [`PreStartup`](Self::PreStartup).
     Init,
@@ -127,11 +130,22 @@ impl<'l> CycleSchedulerFuture<'l> {
     /// Creates a new [`CycleSchedulerFuture`] from a [`World`] and some [`System`](crate::system::System)s.
     fn new(world : &'l World, schedules : &'l ScheduleStorage) -> Self {
         Self {
-            state     : CycleSchedulerState::Init,
+            state          : CycleSchedulerState::Init,
             world,
             schedules,
-            futures   : SparseVec::new()
+            always_futures : Vec::new(),
+            futures        : SparseVec::new()
         }
+    }
+
+    /// TODO: Doc comment
+    fn run_label_always<L : ScheduleLabel + 'static>(&mut self, label : L) {
+        self.always_futures.append(&mut self.schedules.get_schedule(label)
+            .into_iter().map::<_, _>(|system| Box::pin(async {
+                SystemCycleFuture::new(self.world, system.write().await).await
+            }) as _)
+            .collect::<Vec<_>>()
+        );
     }
 
     /// Adds every system under the given label to the running futures.
@@ -150,7 +164,7 @@ impl<'l> CycleSchedulerFuture<'l> {
     }
 
     /// Adds every system under the given label to the running futures.
-    /// 
+    ///
     /// These systems will be wrapped in [`SystemCycleFuture`], and will loop until the app begins to exit.
     fn run_label_cycle<L : ScheduleLabel + 'static>(&mut self, label : L) {
         self.futures.append(&mut self.schedules.get_schedule(label)
@@ -170,13 +184,25 @@ impl<'l> Future for CycleSchedulerFuture<'l> {
 
     fn poll(mut self : Pin<&mut Self>, ctx : &mut Context<'_>) -> Poll<Self::Output> {
 
+        self.always_futures.retain_mut(|fut| {
+            fut.as_mut().poll(ctx).is_pending()
+        });
+
         self.futures.retain(|fut| {
             fut.as_mut().poll(ctx).is_pending()
         });
 
+        if let Poll::Ready(mut cmd_queue) = self.world.cmd_queue.try_write() {
+            for cmd in cmd_queue.drain(..) {
+                let fut = cmd(self.world);
+                self.futures.push(fut);
+            }
+        }
+
         match (self.state) {
 
             CycleSchedulerState::Init => {
+                self.run_label_always(Always);
                 self.run_label_oneshot(PreStartup);
                 self.state = CycleSchedulerState::PreStartup;
                 ctx.waker().wake_by_ref();

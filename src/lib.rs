@@ -43,11 +43,14 @@ pub mod util;
 pub mod prelude {
 
     #[doc(inline)]
+    pub use crate as axecs;
+
+    #[doc(inline)]
     pub use crate::app::{ App, AppExit };
     #[doc(inline)]
     pub use crate::app::plugin::Plugin;
     #[doc(inline)]
-    pub use crate::app::plugin::CycleSchedulerPlugin;
+    pub use crate::app::plugin::{ CycleSchedulerPlugin, CtrlCPlugin };
 
     #[doc(inline)]
     pub use crate::world::{ World, Commands };
@@ -132,12 +135,12 @@ pub mod prelude {
     pub use crate::query::Scoped;
 
     #[doc(inline)]
-    pub use crate::system::{ IntoSystem, In, Local };
+    pub use crate::system::{ IntoSystem, IntoSystemPassable, In, Local };
 
     #[doc(inline)]
-    pub use crate::schedule::label::{ PreStartup, Startup, Cycle, Shutdown, PostShutdown };
+    pub use crate::schedule::label::{ Always, PreStartup, Startup, Cycle, Shutdown, PostShutdown };
     #[doc(inline)]
-    pub use crate::schedule::system::{ IntoScheduledSystemConfig, IntoConditionallyScheduledSystemConfig };
+    pub use crate::schedule::system::IntoScheduledSystemConfig;
 
     /// TODO: Doc comment
     #[cfg(feature = "derive")]

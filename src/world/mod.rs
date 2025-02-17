@@ -9,17 +9,17 @@ use crate::resource::{ Resource, ResourceStorage, ResourceCellReadGuard, Resourc
 use crate::entity::Entity;
 use crate::component::bundle::ComponentBundle;
 use crate::component::archetype::ArchetypeStorage;
-use crate::query::{ Query, ReadOnlyQuery, StatelessQuery, PersistentQueryState, StatelessQueryItem, QueryAcquireFuture };
+use crate::query::{ Query, ReadOnlyQuery, StatelessQuery, PersistentQueryState, StatelessQueryItem };
 use crate::system::{ IntoSystem, IntoReadOnlySystem, IntoStatelessSystem, ReadOnlySystem, StatelessSystem, PersistentSystemState };
 use crate::app::AppExit;
 use crate::schedule::system::TypeErasedSystem;
+use crate::util::rwlock::RwLock;
 use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 use core::sync::atomic::{ AtomicU8, Ordering };
-
-
-/// TODO: Doc comment
-static mut UNIT : () = ();
+use core::pin::Pin;
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 
 
 /// A wrapper for an application's exiting state, resources, entities, etc.
@@ -41,7 +41,10 @@ pub struct World {
     resources   : ResourceStorage,
 
     /// The [`Component`](crate::component::Component) [`Archetype`](crate::component::archetype::Archetype)s in this world.
-    archetypes  : ArchetypeStorage
+    archetypes  : ArchetypeStorage,
+
+    /// TODO: Doc comments
+    pub(crate) cmd_queue : RwLock<Vec<Box<dyn for<'l> FnOnce(&'l World) -> Pin<Box<dyn Future<Output = ()> + 'l>>>>>
 
 }
 
@@ -69,7 +72,8 @@ impl World {
         is_exiting  : AtomicU8::new(0),
         exit_status : UnsafeCell::new(MaybeUninit::uninit()),
         resources   : ResourceStorage::new(),
-        archetypes  : ArchetypeStorage::new()
+        archetypes  : ArchetypeStorage::new(),
+        cmd_queue   : RwLock::new(Vec::new())
     } }
 
     /// creates a new [`World`] with some [`Resource`]s in it to start.
@@ -78,7 +82,8 @@ impl World {
         is_exiting  : AtomicU8::new(0),
         exit_status : UnsafeCell::new(MaybeUninit::uninit()),
         resources,
-        archetypes  : ArchetypeStorage::new()
+        archetypes  : ArchetypeStorage::new(),
+        cmd_queue   : RwLock::new(Vec::new())
     } }
 
 
@@ -88,7 +93,7 @@ impl World {
     }
 
     /// Takes the current [`AppExit`] from this application.
-    /// 
+    ///
     /// # Panics
     /// Panics if the app is not exiting, or the [`AppExit`] has already been taken.
     pub fn take_exit_status(&self) -> AppExit {
@@ -104,7 +109,7 @@ impl World {
     }
 
     /// Signals that the application should begin exiting.
-    /// 
+    ///
     /// # Panics
     /// Panics if the app is already exiting.
     /// See [`World::try_exit`] for a non-panicking variant.
@@ -121,7 +126,7 @@ impl World {
     }
 
     /// Signals that the application should begin exiting.
-    /// 
+    ///
     /// If the application is already exiting, this is a no-op.
     pub fn try_exit(&self, status : AppExit) {
         match (self.is_exiting.compare_exchange(0, 1, Ordering::Acquire, Ordering::Relaxed)) {
@@ -137,28 +142,28 @@ impl World {
 
 
     /// Inserts a [`Resource`] into this world, overwriting any previous resource of the same type.
-    /// 
+    ///
     /// This is more efficient than [`World::replace_resource`], as it doesn't have to wait for the individual resource to lock.
     pub async fn insert_resource<R : Resource + 'static>(&self, resource : R) {
         self.resources.insert::<R>(resource).await
     }
 
     /// Inserts a [`Resource`] into this world, returning the old resource of the same type if it existed.
-    /// 
+    ///
     /// Use [`World::insert_resource`] if you don't need the old value.
     pub async fn replace_resource<R : Resource + 'static>(&self, resource : R) -> Option<R> {
         self.resources.replace::<R>(resource).await
     }
 
     /// Removes a [`Resource`] from this world.
-    /// 
+    ///
     /// This is more efficient than [`World::take_resource`], as it doesn't have to wait for the individual resource to lock.
     pub async fn remove_resource<R : Resource + 'static>(&self) {
         self.resources.remove::<R>().await
     }
 
     /// Removes a [`Resource`] from this world, returning it if it existed.
-    /// 
+    ///
     /// Use [`World::remove_resource`] if you don't need the old value.
     pub async fn take_resource<R : Resource + 'static>(&self) -> Option<R> {
         self.resources.take::<R>().await
@@ -186,7 +191,7 @@ impl World {
     }
 
     /// Spawns an entity with some [`Component`](crate::component::Component)s, without checking that the given [`ComponentBundle`] is valid.
-    /// 
+    ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ComponentBundle`] does not violate the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
     pub async unsafe fn spawn_unchecked<B : ComponentBundle + 'static>(&self, bundle : B) -> Entity {
@@ -196,22 +201,22 @@ impl World {
     /// Spawns multiple entities with some [`Component`](crate::component::Component)s.
     ///
     /// This is more efficient than [`World::spawn`], but has the downside of only being able to spawn entities with the same [`ComponentBundle`] type.
-    /// 
+    ///
     /// # Panics
     /// Panics if the given [`ComponentBundle`]s are not valid.
     /// See [`BundleValidator`](crate::component::bundle::BundleValidator).
     #[track_caller]
-    pub async fn spawn_batch<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B>) -> impl IntoIterator<Item = Entity> {
+    pub async fn spawn_batch<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B>) -> impl Iterator<Item = Entity> {
         self.archetypes.spawn_batch::<B>(bundles).await
     }
 
     /// Spawns multiple entities with some [`Component`](crate::component::Component)s, without checking that the given [`ComponentBundle`] is valid.
     ///
     /// This is more efficient than [`World::spawn`], but has the downside of only being able to spawn entities with the same [`ComponentBundle`] type.
-    /// 
+    ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ComponentBundle`] does not violate the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
-    pub async unsafe fn spawn_batch_unchecked<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B>) -> impl IntoIterator<Item = Entity> {
+    pub async unsafe fn spawn_batch_unchecked<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B>) -> impl Iterator<Item = Entity> {
         unsafe{ self.archetypes.spawn_batch_unchecked::<B>(bundles).await }
     }
 
@@ -221,7 +226,7 @@ impl World {
     }
 
     /// Removes an entity without checking that it exists.
-    /// 
+    ///
     /// # Safety
     /// You are responsible for ensuring that the given entity exists.
     pub async unsafe fn despawn_unchecked(&self, entity : Entity) {
@@ -288,14 +293,14 @@ impl World {
 
     /// TODO: Doc comments
     #[track_caller]
-    pub fn stateless_run_system<S : IntoReadOnlySystem<Params, Return> + IntoStatelessSystem<Params, Return>, Params, Return>(&self, system : S) -> ()
+    pub fn stateless_run_system<S : IntoReadOnlySystem<Params, Return> + IntoStatelessSystem<Params, Return>, Params, Return>(&self, _system : S) -> ()
     where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return> + StatelessSystem<Return>
     {
         todo!()
     }
 
     /// TODO: Doc comments
-    pub fn stateless_run_system_unchecked<S : IntoReadOnlySystem<Params, Return> + IntoStatelessSystem<Params, Return>, Params, Return>(&self, system : S) -> ()
+    pub fn stateless_run_system_unchecked<S : IntoReadOnlySystem<Params, Return> + IntoStatelessSystem<Params, Return>, Params, Return>(&self, _system : S) -> ()
     where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return> + StatelessSystem<Return>
     {
         todo!()
@@ -303,14 +308,14 @@ impl World {
 
     /// TODO: Doc comments
     #[track_caller]
-    pub fn stateless_run_system_mut<S : IntoStatelessSystem<Params, Return>, Params, Return>(&self, system : S) -> ()
+    pub fn stateless_run_system_mut<S : IntoStatelessSystem<Params, Return>, Params, Return>(&self, _system : S) -> ()
     where <S as IntoSystem<Params, Return>>::System : StatelessSystem<Return>
     {
         todo!()
     }
 
     /// TODO: Doc comments
-    pub fn stateless_run_system_unchecked_mut<S : IntoStatelessSystem<Params, Return>, Params, Return>(&self, system : S) -> ()
+    pub fn stateless_run_system_unchecked_mut<S : IntoStatelessSystem<Params, Return>, Params, Return>(&self, _system : S) -> ()
     where <S as IntoSystem<Params, Return>>::System : StatelessSystem<Return>
     {
         todo!()

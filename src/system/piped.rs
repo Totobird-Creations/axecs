@@ -4,6 +4,7 @@
 use crate::world::World;
 use crate::system::{ System, ReadOnlySystem, StatelessSystem, IntoSystem, IntoReadOnlySystem, IntoStatelessSystem, SystemPassable };
 use core::marker::PhantomData;
+use core::ops::{ Deref, DerefMut };
 
 
 pub struct IntoPipedSystem<APassed, A, AParams, BPassed, B, BParams, Return>
@@ -135,8 +136,27 @@ where   A : StatelessSystem<BPassed, Passed = APassed>,
 pub struct In<T> (
 
     /// TODO: Doc comment
-    T
+    pub(super) T
 
 );
 
 impl<T> SystemPassable for In<T> { }
+
+impl<T> Deref for In<T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> DerefMut for In<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<T> In<T> {
+    pub fn into_inner(self) -> T {
+        self.0
+    }
+}

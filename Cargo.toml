@@ -30,6 +30,9 @@ optional = true
 [dependencies.paste]
 version = "1.0"
 
+[dependencies.ctrlc]
+version = "3.4"
+
 
 [dev-dependencies.async-std]
 version  = "1.13"

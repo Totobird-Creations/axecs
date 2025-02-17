@@ -15,7 +15,7 @@ pub fn derive_component(input : TokenStream1) -> TokenStream1 {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     quote!{
-        impl #impl_generics ::axecs::component::Component for #ident #ty_generics #where_clause { }
+        impl #impl_generics axecs::component::Component for #ident #ty_generics #where_clause { }
     }.into()
 }
 
@@ -62,35 +62,35 @@ pub fn derive_bundle(input : TokenStream1) -> TokenStream1 {
 
             }
             quote!{
-                unsafe impl #impl_generics ::axecs::component::bundle::ComponentBundle for #ident #ty_generics #where_clause {
+                unsafe impl #impl_generics axecs::component::bundle::ComponentBundle for #ident #ty_generics #where_clause {
 
-                    fn type_info() -> Vec<::axecs::component::ComponentTypeInfo> {
+                    fn type_info() -> Vec<axecs::component::ComponentTypeInfo> {
                         let mut ctis = Vec::new();
                         #( ctis.append(
-                            &mut <(#type_infos) as ::axecs::component::bundle::ComponentBundle>
+                            &mut <(#type_infos) as axecs::component::bundle::ComponentBundle>
                                 ::type_info()
                         ); )*
                         ctis
                     }
 
-                    unsafe fn push_into(self, archetype : &mut ::axecs::component::archetype::Archetype) {
+                    unsafe fn push_into(self, archetype : &mut axecs::component::archetype::Archetype) {
                         #( unsafe{
-                            <(#type_infos) as ::axecs::component::bundle::ComponentBundle>
+                            <(#type_infos) as axecs::component::bundle::ComponentBundle>
                                 ::push_into((self.#field_names), archetype)
                         }; )*
                     }
 
-                    unsafe fn write_into(self, archetype : &mut ::axecs::component::archetype::Archetype, row : usize) {
+                    unsafe fn write_into(self, archetype : &mut axecs::component::archetype::Archetype, row : usize) {
                         #( unsafe{
-                            <(#type_infos) as ::axecs::component::bundle::ComponentBundle>
+                            <(#type_infos) as axecs::component::bundle::ComponentBundle>
                                 ::write_into((self.#field_names), archetype, row)
                         }; )*
                     }
 
-                    fn validate() -> ::axecs::component::bundle::BundleValidator {
-                        let mut bundle = ::axecs::component::bundle::BundleValidator::empty();
-                        #( bundle = ::axecs::component::bundle::BundleValidator::join(bundle, unsafe{
-                            <(#type_infos) as ::axecs::component::bundle::ComponentBundle>
+                    fn validate() -> axecs::component::bundle::BundleValidator {
+                        let mut bundle = axecs::component::bundle::BundleValidator::empty();
+                        #( bundle = axecs::component::bundle::BundleValidator::join(bundle, unsafe{
+                            <(#type_infos) as axecs::component::bundle::ComponentBundle>
                                 ::validate()
                         }); )*
                         bundle
@@ -125,7 +125,7 @@ pub fn derive_resource(input : TokenStream1) -> TokenStream1 {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     quote!{
-        impl #impl_generics ::axecs::resource::Resource for #ident #ty_generics #where_clause { }
+        impl #impl_generics axecs::resource::Resource for #ident #ty_generics #where_clause { }
     }.into()
 }
 
@@ -141,6 +141,6 @@ pub fn derive_label(input : TokenStream1) -> TokenStream1 {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     quote!{
-        impl #impl_generics ::axecs::schedule::label::ScheduleLabel for #ident #ty_generics #where_clause { }
+        impl #impl_generics axecs::schedule::label::ScheduleLabel for #ident #ty_generics #where_clause { }
     }.into()
 }

@@ -16,6 +16,9 @@ pub use series::*;
 mod parallel;
 pub use parallel::*;
 
+mod passed;
+pub use passed::*;
+
 mod state;
 pub use state::*;
 
@@ -88,6 +91,30 @@ pub trait IntoSystem<Params, Return> : Sized {
     }
 
 }
+
+
+/// TODO: Doc comment
+pub trait IntoSystemPassable<Passed : Clone, Params, Return> : Sized
+where   Self         : IntoSystem<Params, Return>,
+        Self::System : System<Return, Passed = In<Passed>>
+{
+
+    /// TODO: Doc comment
+    fn pass(self, passed : Passed) -> IntoPassedSystem<Passed, Self, Params, Return>
+    {
+        IntoPassedSystem {
+            system : self,
+            passed,
+            marker : PhantomData
+        }
+    }
+
+}
+
+impl<Passed, S : IntoSystem<Params, Return>, Params, Return> IntoSystemPassable<Passed, Params, Return> for S
+where   S::System : System<Return, Passed = In<Passed>>,
+        Passed    : Clone
+{ }
 
 
 /// TODO: Doc comment
