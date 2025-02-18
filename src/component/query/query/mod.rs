@@ -21,6 +21,9 @@ pub unsafe trait ComponentQuery {
     /// The type that this [`ComponentQuery`] returns when iterated mutably.
     type ItemMut<'item>;
 
+    /// TODO: Doc comments
+    type AsStatic : ComponentQuery;
+
     /// Returns `true` if this [`ComponentQuery`] only requests types in the given [`Archetype`].
     fn is_subset_of_archetype(column_types : &[TypeId]) -> bool;
 
@@ -30,7 +33,7 @@ pub unsafe trait ComponentQuery {
     /// The caller is responsible for ensuring that:
     /// - this query does not violate the borrow checker rules.
     /// - the given row exists.
-    unsafe fn get_row_ref<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::Item<'world>>;
+    unsafe fn get_row_ref<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::Item<'item>>;
 
     /// Gets a row in the [`Archetype`] by row.
     ///
@@ -39,8 +42,9 @@ pub unsafe trait ComponentQuery {
     /// # Safety
     /// The caller is responsible for ensuring that:
     /// - this query does not violate the borrow checker rules.
+    /// - the given archetype is not borrowed anywhere else. This should be treated as if it is being borrowed mutably.
     /// - the given row exists.
-    unsafe fn get_row_mut<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'world>>;
+    unsafe fn get_row_mut<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'item>>;
 
     /// Traverses the types in this [`ComponentQuery`], joining them to a [`QueryValidator`].
     ///

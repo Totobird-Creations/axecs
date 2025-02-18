@@ -162,6 +162,16 @@ impl Archetype {
         core::hint::unreachable_unchecked()
     }
 
+    /// TODO: Doc comment
+    pub fn has_column<C : Component + 'static>(&self) -> bool {
+        let type_id = TypeId::of::<C>();
+        self.columns.iter().any(|column| {
+            // SAFETY: `self` is borrowed immutably, preventing it from being accessed mutably.
+            let column = unsafe{ &*column.get() };
+            column.type_id() == type_id
+        })
+    }
+
     /// Returns an [`Iterator`] to a column from this archetype.
     ///
     /// If this archetype does not contain a column of type `C`, `None` is returned.
@@ -243,7 +253,7 @@ impl Archetype {
     }
 
     /// Returns an [`Iterator`] over the populated rows in this archetype.
-    pub fn rows(&self) -> impl Iterator<Item = usize> {
+    pub fn rows<'l>(&'l self) -> impl Iterator<Item = usize> + 'l {
         (0..self.rows_dense_next).filter(|row| ! self.unoccupied_rows.contains(row))
     }
 

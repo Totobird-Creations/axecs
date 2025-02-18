@@ -15,16 +15,17 @@ use core::any::type_name;
 unsafe impl ComponentQuery for () {
     type Item<'item> = ();
     type ItemMut<'item> = Self::Item<'item>;
+    type AsStatic = ();
 
     fn is_subset_of_archetype(_column_types : &[TypeId]) -> bool {
         true
     }
 
-    unsafe fn get_row_ref<'world>(_archetype : &'world Archetype, _row : usize) -> QueryAcquireResult<Self::Item<'world>> {
+    unsafe fn get_row_ref<'item>(_archetype : &'item Archetype, _row : usize) -> QueryAcquireResult<Self::Item<'item>> {
         QueryAcquireResult::Ready(())
     }
 
-    unsafe fn get_row_mut<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'world>> {
+    unsafe fn get_row_mut<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'item>> {
         // SAFETY: The caller is responsible for upholding the safety guarantees.
         unsafe{ Self::get_row_ref(archetype, row) }
     }
@@ -40,12 +41,13 @@ unsafe impl ReadOnlyComponentQuery for () { }
 unsafe impl ComponentQuery for Entity {
     type Item<'item> = Entity;
     type ItemMut<'item> = Self::Item<'item>;
+    type AsStatic = Entity;
 
     fn is_subset_of_archetype(_column_types : &[TypeId]) -> bool {
         true
     }
 
-    unsafe fn get_row_ref<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::Item<'world>> {
+    unsafe fn get_row_ref<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::Item<'item>> {
         QueryAcquireResult::Ready(Entity::new(
             archetype.archetype_id(),
             #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
@@ -54,7 +56,7 @@ unsafe impl ComponentQuery for Entity {
         ))
     }
 
-    unsafe fn get_row_mut<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'world>> {
+    unsafe fn get_row_mut<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'item>> {
         // SAFETY: The caller is responsible for upholding the safety guarantees.
         unsafe{ Self::get_row_ref(archetype, row) }
     }
@@ -67,15 +69,47 @@ unsafe impl ComponentQuery for Entity {
 unsafe impl ReadOnlyComponentQuery for Entity { }
 
 
+unsafe impl<Q : ComponentQuery> ComponentQuery for Option<Q> {
+    type Item<'item> = Option<Q::Item<'item>>;
+    type ItemMut<'item> = Option<Q::ItemMut<'item>>;
+    type AsStatic = Option<Q::AsStatic>;
+
+    fn is_subset_of_archetype(_column_types : &[TypeId]) -> bool {
+        true
+    }
+
+    unsafe fn get_row_ref<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::Item<'item>> {
+        // SAFETY: TODO
+        match (unsafe{ <Q as ComponentQuery>::get_row_ref(archetype, row) }) {
+            QueryAcquireResult::Ready(out)          => QueryAcquireResult::Ready(Some(out)),
+            QueryAcquireResult::DoesNotExist { .. } => QueryAcquireResult::Ready(None)
+        }
+    }
+
+    unsafe fn get_row_mut<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'item>> {
+        // SAFETY: TODO
+        match (unsafe{ <Q as ComponentQuery>::get_row_mut(archetype, row) }) {
+            QueryAcquireResult::Ready(out)          => QueryAcquireResult::Ready(Some(out)),
+            QueryAcquireResult::DoesNotExist { .. } => QueryAcquireResult::Ready(None)
+        }
+    }
+
+    fn validate() -> QueryValidator {
+        <Q as ComponentQuery>::validate()
+    }
+}
+
+
 unsafe impl<C : Component + 'static> ComponentQuery for &C {
     type Item<'item> = &'item C;
     type ItemMut<'item> = Self::Item<'item>;
+    type AsStatic = &'static C;
 
     fn is_subset_of_archetype(column_types : &[TypeId]) -> bool {
         column_types.contains(&TypeId::of::<C>())
     }
 
-    unsafe fn get_row_ref<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::Item<'world>> {
+    unsafe fn get_row_ref<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::Item<'item>> {
         if let Some(column) = archetype.get_column_ref::<C>() {
             // SAFETY: TODO
             QueryAcquireResult::Ready(unsafe{ column.get_ref(row) })
@@ -87,7 +121,7 @@ unsafe impl<C : Component + 'static> ComponentQuery for &C {
         }
     }
 
-    unsafe fn get_row_mut<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'world>> {
+    unsafe fn get_row_mut<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'item>> {
         // SAFETY: The caller is responsible for upholding the safety guarantees.
         unsafe{ Self::get_row_ref(archetype, row) }
     }
@@ -103,17 +137,18 @@ unsafe impl<C : Component + 'static> ReadOnlyComponentQuery for &C { }
 unsafe impl<C : Component + 'static> ComponentQuery for &mut C {
     type Item<'item> = &'item C;
     type ItemMut<'item> = &'item mut C;
+    type AsStatic = &'static mut C;
 
     fn is_subset_of_archetype(column_types : &[TypeId]) -> bool {
         column_types.contains(&TypeId::of::<C>())
     }
 
-    unsafe fn get_row_ref<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::Item<'world>> {
+    unsafe fn get_row_ref<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::Item<'item>> {
         // SAFETY: The caller is responsible for upholding the safety guarantees.
         unsafe{ <&C as ComponentQuery>::get_row_ref(archetype, row) }
     }
 
-    unsafe fn get_row_mut<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'world>> {
+    unsafe fn get_row_mut<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'item>> {
         if let Some(column) = archetype.get_column_ptr::<C>() {
             // SAFETY: TODO
             QueryAcquireResult::Ready(unsafe{ (&mut*column).get_mut(row) })
@@ -132,36 +167,6 @@ unsafe impl<C : Component + 'static> ComponentQuery for &mut C {
 }
 
 
-unsafe impl<Q : ComponentQuery> ComponentQuery for Option<Q> {
-    type Item<'item> = Option<Q::Item<'item>>;
-    type ItemMut<'item> = Option<Q::ItemMut<'item>>;
-
-    fn is_subset_of_archetype(_column_types : &[TypeId]) -> bool {
-        true
-    }
-
-    unsafe fn get_row_ref<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::Item<'world>> {
-        // SAFETY: TODO
-        match (unsafe{ <Q as ComponentQuery>::get_row_ref(archetype, row) }) {
-            QueryAcquireResult::Ready(out)          => QueryAcquireResult::Ready(Some(out)),
-            QueryAcquireResult::DoesNotExist { .. } => QueryAcquireResult::Ready(None)
-        }
-    }
-
-    unsafe fn get_row_mut<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'world>> {
-        // SAFETY: TODO
-        match (unsafe{ <Q as ComponentQuery>::get_row_mut(archetype, row) }) {
-            QueryAcquireResult::Ready(out)          => QueryAcquireResult::Ready(Some(out)),
-            QueryAcquireResult::DoesNotExist { .. } => QueryAcquireResult::Ready(None)
-        }
-    }
-
-    fn validate() -> QueryValidator {
-        <Q as ComponentQuery>::validate()
-    }
-}
-
-
 variadic_no_unit!{ #[doc(fake_variadic)] impl_component_query_for_tuple }
 /// Implements [`ComponentQuery`] and [`ReadOnlyComponentQuery`] for a tuples of those types.
 macro impl_component_query_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) {
@@ -171,12 +176,13 @@ macro impl_component_query_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* 
     unsafe impl< $( $generic : ComponentQuery ),* > ComponentQuery for ( $( $generic , )* ) {
         type Item<'item> = ( $( $generic::Item<'item> , )* );
         type ItemMut<'item> = ( $( $generic::ItemMut<'item> , )* );
+        type AsStatic = ( $( $generic::AsStatic , )* );
 
         fn is_subset_of_archetype(column_types : &[TypeId]) -> bool {
             true $( && $generic::is_subset_of_archetype(column_types) )*
         }
 
-        unsafe fn get_row_ref<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::Item<'world>> {
+        unsafe fn get_row_ref<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::Item<'item>> {
             // SAFETY: The caller is responsible for upholding the safety guarantees.
             $( let $generic = match (unsafe{ <$generic as ComponentQuery>::get_row_ref(archetype, row) }) {
                 QueryAcquireResult::Ready(out)            => out,
@@ -188,7 +194,7 @@ macro impl_component_query_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* 
             QueryAcquireResult::Ready(( $( $generic , )* ))
         }
 
-        unsafe fn get_row_mut<'world>(archetype : &'world Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'world>> {
+        unsafe fn get_row_mut<'item>(archetype : &'item Archetype, row : usize) -> QueryAcquireResult<Self::ItemMut<'item>> {
             // SAFETY: The caller is responsible for upholding the safety guarantees.
             // SAFETY: As long as this [`ComponentQuery`] does not violate the archetype rules,
             //         this operation will not access a column that is already mutable accessed

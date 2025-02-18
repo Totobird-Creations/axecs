@@ -27,6 +27,8 @@ use __internal::*;
 pub struct Res<R : ResInner> {
     guard : R::Guard
 }
+unsafe impl<R : ResInner + Send> Send for Res<R> { }
+unsafe impl<R : ResInner + Sync> Sync for Res<R> { }
 
 
 impl<R : Resource> ResInner for &R {
@@ -71,6 +73,12 @@ impl<R : Resource> Deref for Res<&R> {
     fn deref(&self) -> &Self::Target {
         // SAFETY: TODO
         unsafe{ self.guard.get_ref::<R>() }
+    }
+}
+
+impl<R : Resource> Res<&R> {
+    pub fn as_static(self) -> Res<&'static R> {
+        Res { guard : self.guard }
     }
 }
 
@@ -122,5 +130,11 @@ impl<R : Resource> DerefMut for Res<&mut R> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         // SAFETY: TODO
         unsafe{ self.guard.get_mut::<R>() }
+    }
+}
+
+impl<R : Resource> Res<&mut R> {
+    pub fn as_static(self) -> Res<&'static mut R> {
+        Res { guard : self.guard }
     }
 }

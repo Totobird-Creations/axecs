@@ -7,6 +7,9 @@ use crate::component::archetype::{ ArchetypeStorage, Archetype };
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryValidator };
 use crate::util::rwlock::RwLockWriteGuard;
 use core::task::Poll;
+use core::ops::{ Deref, DerefMut };
+use core::mem::MaybeUninit;
+use core::cell::UnsafeCell;
 use core::marker::PhantomData;
 use alloc::vec::Vec;
 use alloc::sync::Arc;
@@ -19,7 +22,10 @@ pub struct Entities<Q : ComponentQuery, F : ComponentFilter = True> {
     archetypes : Vec<RwLockWriteGuard<Archetype>>,
 
     /// TODO: Doc comments
-    marker     : PhantomData<(Q, fn(F) -> bool)>
+    marker_a  : PhantomData<fn(&Archetype, usize) -> Q::ItemMut<'static>>,
+
+    /// TODO: Doc comments
+    marker_b   : PhantomData<fn(F) -> bool>
 
 }
 
@@ -45,12 +51,23 @@ impl<Q : ComponentQuery, F : ComponentFilter> Entities<Q, F> {
                 ) {
                     Some(out) => Poll::Ready(Entities {
                         archetypes : out,
-                        marker     : PhantomData
+                        marker_a   : PhantomData,
+                        marker_b   : PhantomData
                     }),
                     None => Poll::Pending,
                 }
             },
             Poll::Pending => Poll::Pending
+        }
+    }
+
+
+    /// TODO: Doc comments
+    pub fn as_static(self) -> Entities<Q::AsStatic, F> {
+        Entities {
+            archetypes : self.archetypes,
+            marker_a   : PhantomData,
+            marker_b   : PhantomData
         }
     }
 
@@ -95,8 +112,8 @@ impl<'l, Q : ComponentQuery, F : ComponentFilter> IntoIterator for &'l Entities<
     type IntoIter = impl Iterator<Item = Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        // SAFETY: TODO
         self.archetypes.iter().map(|archetype| archetype.rows().map(|row|
+            // SAFETY: TODO
             unsafe{ Q::get_row_ref(archetype, row).unwrap_unchecked() }
         )).flatten()
     }
@@ -108,9 +125,71 @@ impl<'l, Q : ComponentQuery, F : ComponentFilter> IntoIterator for &'l mut Entit
     type IntoIter = impl Iterator<Item = Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        // SAFETY: TODO
         self.archetypes.iter_mut().map(|archetype| archetype.rows().map(|row|
+            // SAFETY: TODO
             unsafe{ Q::get_row_mut(archetype, row).unwrap_unchecked() }
         )).flatten()
+    }
+}
+
+
+impl<Q : ComponentQuery, F : ComponentFilter> IntoIterator for Entities<Q, F> {
+    type Item     = EntitiesEntry<Q::AsStatic>;
+    type IntoIter = impl Iterator<Item = Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.archetypes.into_iter().map(|archetype| {
+            let archetype = Arc::new(archetype);
+            archetype.rows().collect::<Vec<_>>().into_iter().map(move |row| {
+                let mut entry = EntitiesEntry {
+                    archetype : UnsafeCell::new(Arc::clone(&archetype)),
+                    entry     : MaybeUninit::uninit()
+                };
+                // SAFETY: TODO
+                entry.entry.write(unsafe{ Q::AsStatic::get_row_mut(&*entry.archetype.get(), row).unwrap_unchecked() });
+                entry
+            })
+        }).flatten()
+    }
+}
+
+/// TODO: Doc comments
+pub struct EntitiesEntry<Q : ComponentQuery> {
+
+    /// TODO: Doc comments
+    archetype : UnsafeCell<Arc<RwLockWriteGuard<Archetype>>>,
+
+    /// TODO: Doc comments
+    entry : MaybeUninit<Q::ItemMut<'static>>
+
+}
+
+unsafe impl<Q : ComponentQuery> Sync for EntitiesEntry<Q>
+where Q::ItemMut<'static> : Sync
+{ }
+
+unsafe impl<Q : ComponentQuery> Send for EntitiesEntry<Q>
+where Q::ItemMut<'static> : Send
+{ }
+
+impl<Q : ComponentQuery> Deref for EntitiesEntry<Q> {
+    type Target = Q::ItemMut<'static>;
+    fn deref(&self) -> &Self::Target {
+        // SAFETY: TODO
+        unsafe{ self.entry.assume_init_ref() }
+    }
+}
+
+impl<Q : ComponentQuery> DerefMut for EntitiesEntry<Q> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        // SAFETY: TODO
+        unsafe{ self.entry.assume_init_mut() }
+    }
+}
+
+impl<Q : ComponentQuery> Drop for EntitiesEntry<Q> {
+    fn drop(&mut self) {
+        // SAFETY: TODO
+        unsafe{ self.entry.assume_init_drop(); }
     }
 }

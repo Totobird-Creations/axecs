@@ -11,7 +11,8 @@
     async_fn_track_caller,
     future_join,
     map_try_insert,
-    concat_idents
+    concat_idents,
+    arbitrary_self_types
 )]
 #![feature(
     assert_matches,
