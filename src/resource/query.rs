@@ -8,6 +8,7 @@ use crate::util::rwlock::{ RwLockReadGuard, RwLockWriteGuard };
 use core::ops::{ Deref, DerefMut };
 use core::any::TypeId;
 use core::task::Poll;
+use alloc::sync::Arc;
 
 
 /// TODO: Doc comment
@@ -33,12 +34,12 @@ impl<R : Resource> ResInner for &R {
 }
 
 unsafe impl<'l, R : Resource + 'static> Query for Res<&'l R> {
-    type Item<'world, 'state> = Res<&'world R>;
+    type Item = Res<&'l R>;
     type State = ();
 
     fn init_state() -> Self::State { }
 
-    unsafe fn acquire<'world, 'state>(world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
+    unsafe fn acquire(world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         match (world.resources().try_read_raw()) {
             Poll::Ready(inner) => {
                 let type_id = TypeId::of::<R>();
@@ -79,12 +80,12 @@ impl<R : Resource> ResInner for &mut R {
 }
 
 unsafe impl<'l, R : Resource + 'static> Query for Res<&'l mut R> {
-    type Item<'world, 'state> = Res<&'world mut R>;
+    type Item = Res<&'l mut R>;
     type State = ();
 
     fn init_state() -> Self::State { }
 
-    unsafe fn acquire<'world, 'state>(world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
+    unsafe fn acquire(world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         match (world.resources().try_read_raw()) {
             Poll::Ready(inner) => {
                 let type_id = TypeId::of::<R>();

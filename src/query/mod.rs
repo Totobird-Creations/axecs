@@ -16,6 +16,7 @@ use crate::world::World;
 use crate::util::unqualified::UnqualifiedTypeName;
 use core::task::Poll;
 use core::hint::unreachable_unchecked;
+use alloc::sync::Arc;
 
 
 /// TODO: Doc comments
@@ -25,7 +26,7 @@ use core::hint::unreachable_unchecked;
 pub unsafe trait Query : Sized {
 
     /// TODO: Doc comments
-    type Item<'world, 'state>;
+    type Item;
 
     /// TODO: Doc comments
     type State = ();
@@ -40,7 +41,7 @@ pub unsafe trait Query : Sized {
     /// - the query does not violate any borrow checker or archetype rules.
     ///   See [`QueryValidator`] and [`BundleValidator`](crate::component::bundle::BundleValidator).
     /// - `world` must be the same [`World`] that was used to initialise `state` in [`Query::init_state`].
-    unsafe fn acquire<'world, 'state>(world : &'world World, state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>>;
+    unsafe fn acquire(world : Arc<World>, state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>>;
 
     /// Traverses the types in this bundle, joining them to a [`QueryValidator`].
     ///
@@ -59,11 +60,6 @@ pub unsafe trait Query : Sized {
 
 /// A marker that promises a [`Query`] will not grant mutable or owned access to any values.
 pub unsafe trait ReadOnlyQuery : Query { }
-
-/// TODO: Doc comments
-pub unsafe trait StatelessQuery : Query<State = ()> { }
-
-unsafe impl<Q : Query<State = ()>> StatelessQuery for Q { }
 
 
 /// The result of a [`Query`].

@@ -5,13 +5,14 @@ use crate::world::World;
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryAcquireFuture, QueryValidator };
 use core::ops::AsyncFnMut;
 use core::task::Poll;
+use alloc::sync::Arc;
 
 
 /// TODO: Doc comment
-pub struct Scoped<'l, Q : Query> {
+pub struct Scoped<Q : Query> {
 
     /// TODO: Doc comment
-    world : &'l World,
+    world : Arc<World>,
 
     /// TODO: Doc comment
     state : Q::State
@@ -19,15 +20,15 @@ pub struct Scoped<'l, Q : Query> {
 }
 
 
-impl<'l, Q : Query> Scoped<'l, Q> {
+impl<Q : Query> Scoped<Q> {
 
-    pub async fn with<F : AsyncFnMut(Q::Item<'l, 'l>) -> U, U>(&'l mut self, f : F) -> U {
+    pub async fn with<F : AsyncFnMut(Q::Item) -> U, U>(&mut self, f : F) -> U {
         self.try_with(f).await.unwrap()
     }
 
-    pub async fn try_with<F : AsyncFnMut(Q::Item<'l, 'l>) -> U, U>(&'l mut self, mut f : F) -> QueryAcquireResult<U> {
+    pub async fn try_with<F : AsyncFnMut(Q::Item) -> U, U>(&mut self, mut f : F) -> QueryAcquireResult<U> {
         // SAFETY: TODO
-        match (unsafe{ QueryAcquireFuture::<Q>::new(self.world, &mut self.state) }.await) {
+        match (unsafe{ QueryAcquireFuture::<Q>::new(Arc::clone(&self.world), &mut self.state) }.await) {
 
             QueryAcquireResult::Ready(out) => QueryAcquireResult::Ready(f(out).await),
 
@@ -42,9 +43,9 @@ impl<'l, Q : Query> Scoped<'l, Q> {
 }
 
 
-unsafe impl<'l, Q : Query> Query for Scoped<'l, Q> {
+unsafe impl<Q : Query> Query for Scoped<Q> {
 
-    type Item<'world, 'state> = Scoped<'world, Q>;
+    type Item = Scoped<Q>;
 
     type State = ();
 
@@ -52,7 +53,7 @@ unsafe impl<'l, Q : Query> Query for Scoped<'l, Q> {
         ()
     }
 
-    unsafe fn acquire<'world, 'state>(world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
+    unsafe fn acquire(world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         Poll::Ready(QueryAcquireResult::Ready(Scoped {
             world,
             state : Q::init_state()
@@ -65,4 +66,4 @@ unsafe impl<'l, Q : Query> Query for Scoped<'l, Q> {
 
 }
 
-unsafe impl<'l, Q : ReadOnlyQuery> ReadOnlyQuery for Scoped<'l, Q> { }
+unsafe impl<Q : ReadOnlyQuery> ReadOnlyQuery for Scoped<Q> { }

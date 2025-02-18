@@ -39,7 +39,7 @@ async fn startup() {
 
 
 async fn update(
-    commands : Commands<'_>
+    commands : Commands
 ) {
     println!("BEGIN update");
     for _ in 0..5 {

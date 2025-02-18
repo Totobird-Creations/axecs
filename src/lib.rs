@@ -135,7 +135,7 @@ pub mod prelude {
     pub use crate::query::Scoped;
 
     #[doc(inline)]
-    pub use crate::system::{ IntoSystem, IntoSystemPassable, In, Local };
+    pub use crate::system::{ IntoSystem, IntoSystemPassable, In };
 
     #[doc(inline)]
     pub use crate::schedule::label::{ Always, PreStartup, Startup, Cycle, Shutdown, PostShutdown };

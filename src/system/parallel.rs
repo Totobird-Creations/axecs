@@ -2,10 +2,11 @@
 
 
 use crate::world::World;
-use crate::system::{ System, ReadOnlySystem, StatelessSystem, IntoSystem, IntoReadOnlySystem, IntoStatelessSystem };
+use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
 use crate::util::variadic::variadic_no_unit;
 use core::marker::PhantomData;
 use core::future::join;
+use alloc::sync::Arc;
 use paste::paste;
 
 
@@ -68,15 +69,6 @@ where   A         : IntoReadOnlySystem<AParams, ()>,
         B::System : ReadOnlySystem<(), Passed = ()>
 { }
 
-unsafe impl<A, AParams, B, BParams>
-    IntoStatelessSystem<(), ()>
-    for IntoParallelSystem<A, AParams, B, BParams>
-where   A         : IntoStatelessSystem<AParams, ()>,
-        B         : IntoStatelessSystem<BParams, ()>,
-        A::System : StatelessSystem<(), Passed = ()>,
-        B::System : StatelessSystem<(), Passed = ()>
-{ }
-
 
 /// TODO: Doc comment
 pub struct ParallelSystem<A, B>
@@ -101,9 +93,9 @@ where   A : System<(), Passed = ()>,
     type Passed = ();
 
     #[track_caller]
-    async unsafe fn acquire_and_run(&mut self, a_passed : Self::Passed, world : &World) -> () {
+    async unsafe fn acquire_and_run(&mut self, a_passed : Self::Passed, world : Arc<World>) -> () {
         // SAFETY: TODO
-        let a = unsafe{ self.a.acquire_and_run(a_passed, world) };
+        let a = unsafe{ self.a.acquire_and_run(a_passed, Arc::clone(&world)) };
         // SAFETY: TODO
         let b = unsafe{ self.b.acquire_and_run((), world) };
 
@@ -116,13 +108,6 @@ unsafe impl<A, B>
     for ParallelSystem<A, B>
 where   A : ReadOnlySystem<(), Passed = ()>,
         B : ReadOnlySystem<(), Passed = ()>
-{ }
-
-unsafe impl<A, B>
-    StatelessSystem<()>
-    for ParallelSystem<A, B>
-where   A : StatelessSystem<(), Passed = ()>,
-        B : StatelessSystem<(), Passed = ()>
 { }
 
 

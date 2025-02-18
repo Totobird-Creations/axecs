@@ -2,8 +2,9 @@
 
 
 use crate::world::World;
-use crate::system::{ System, ReadOnlySystem, StatelessSystem, IntoSystem, IntoReadOnlySystem, IntoStatelessSystem };
+use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
 use core::marker::PhantomData;
+use alloc::sync::Arc;
 
 
 pub struct IntoSeriesSystem<APassed, A, AParams, B, BParams, Return>
@@ -69,15 +70,6 @@ where   A         : IntoReadOnlySystem<AParams, ()>,
         B::System : ReadOnlySystem<Return, Passed = ()>
 { }
 
-unsafe impl<APassed, A, AParams, B, BParams, Return>
-    IntoStatelessSystem<(), Return>
-    for IntoSeriesSystem<APassed, A, AParams, B, BParams, Return>
-where   A         : IntoStatelessSystem<AParams, ()>,
-        B         : IntoStatelessSystem<BParams, Return>,
-        A::System : StatelessSystem<(), Passed = APassed>,
-        B::System : StatelessSystem<Return, Passed = ()>
-{ }
-
 
 /// TODO: Doc comment
 pub struct SeriesSystem<APassed, A, B, Return>
@@ -108,9 +100,9 @@ where   A : System<(), Passed = APassed>,
     type Passed = APassed;
 
     #[track_caller]
-    async unsafe fn acquire_and_run(&mut self, a_passed : Self::Passed, world : &World) -> Return {
+    async unsafe fn acquire_and_run(&mut self, a_passed : Self::Passed, world : Arc<World>) -> Return {
         // SAFETY: TODO
-        unsafe{ self.a.acquire_and_run(a_passed, world) }.await;
+        unsafe{ self.a.acquire_and_run(a_passed, Arc::clone(&world)) }.await;
         // SAFETY: TODO
         unsafe{ self.b.acquire_and_run((), world) }.await
     }
@@ -121,11 +113,4 @@ unsafe impl<APassed, A, B, Return>
     for SeriesSystem<APassed, A, B, Return>
 where   A : ReadOnlySystem<(), Passed = APassed>,
         B : ReadOnlySystem<Return, Passed = ()>
-{ }
-
-unsafe impl<APassed, A, B, Return>
-    StatelessSystem<Return>
-    for SeriesSystem<APassed, A, B, Return>
-where   A : StatelessSystem<(), Passed = APassed>,
-        B : StatelessSystem<Return, Passed = ()>
 { }

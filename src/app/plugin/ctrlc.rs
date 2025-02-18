@@ -54,7 +54,7 @@ async fn set_handler() {
 
 
 async fn exit_with_status(
-        cmds   : Commands<'_>,
+        cmds   : Commands,
     mut status : Res<&mut CtrlCStatus>
 ) {
     if let Some(exit_status) = status.exit_status.take() {

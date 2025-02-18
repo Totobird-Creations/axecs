@@ -2,8 +2,9 @@
 
 
 use crate::world::World;
-use crate::system::{ System, ReadOnlySystem, StatelessSystem, IntoSystem, IntoReadOnlySystem, IntoStatelessSystem, In };
+use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, In };
 use core::marker::PhantomData;
+use alloc::sync::Arc;
 
 
 /// TODO: Doc comment
@@ -65,15 +66,6 @@ where   S         : IntoReadOnlySystem<Params, Return>,
 { }
 
 
-unsafe impl<Passed, S, Params, Return>
-    IntoStatelessSystem<(), Return>
-    for IntoPassedSystem<Passed, S, Params, Return>
-where   S         : IntoStatelessSystem<Params, Return>,
-        S::System : StatelessSystem<Return, Passed = In<Passed>>,
-        Passed    : Clone
-{ }
-
-
 /// TODO: Doc comment
 pub struct PassedSystem<Passed, S, Return>
 where   S : System<Return, Passed = In<Passed>>
@@ -100,7 +92,7 @@ where   S      : System<Return, Passed = In<Passed>>,
 
     type Passed = ();
 
-    async unsafe fn acquire_and_run(&mut self, _ : Self::Passed, world : &World) -> Return {
+    async unsafe fn acquire_and_run(&mut self, _ : Self::Passed, world : Arc<World>) -> Return {
         unsafe{ self.system.acquire_and_run(In(self.passed.clone()), world) }.await
     }
 
@@ -111,13 +103,5 @@ unsafe impl<Passed, S, Return>
     ReadOnlySystem<Return>
     for PassedSystem<Passed, S, Return>
 where   S      : ReadOnlySystem<Return, Passed = In<Passed>>,
-        Passed : Clone
-{ }
-
-
-unsafe impl<Passed, S, Return>
-    StatelessSystem<Return>
-    for PassedSystem<Passed, S, Return>
-where   S      : StatelessSystem<Return, Passed = In<Passed>>,
         Passed : Clone
 { }

@@ -4,33 +4,35 @@
 use crate::app::AppExit;
 use crate::world::World;
 use crate::resource::Resource;
+use crate::component::bundle::ComponentBundle;
 use crate::query::{ Query, QueryAcquireResult, QueryValidator };
-use crate::system::{ IntoSystem, IntoReadOnlySystem, IntoStatelessSystem, System, ReadOnlySystem, StatelessSystem };
+use crate::system::{ IntoSystem, IntoReadOnlySystem, System, ReadOnlySystem };
 use core::task::Poll;
 use alloc::boxed::Box;
+use alloc::sync::Arc;
 
 
 /// TODO: Doc comments
-#[derive(Clone, Copy)]
-pub struct Commands<'l> {
+#[derive(Clone)]
+pub struct Commands {
 
     /// TODO: Doc comments
-    world : &'l World
+    world : Arc<World>
 
 }
 
 
-impl<'l> Commands<'l> {
+impl Commands {
 
-    /// TODO: Doc comments
+    /*/// TODO: Doc comments
     ///
     /// # Warning
     /// If this is used to run an operation on the [`World`] which requests some values,
     ///  but the calling system has already locked it, the operation will deadlock.
     /// Use with caution.
     pub fn world(&self) -> &World {
-        self.world
-    }
+        self.world.as_ref()
+    }*/
 
     /// TODO: Doc comments
     pub fn is_exiting(&self) -> bool {
@@ -50,27 +52,34 @@ impl<'l> Commands<'l> {
     /// TODO: Doc comments
     pub async fn insert_resource<R : Resource + 'static>(&self, resource : R) {
         self.world.cmd_queue.write().await.push(Box::new(move |world|
-            Box::pin(world.insert_resource(resource))
+            Box::pin(async move { world.insert_resource(resource).await })
         ))
     }
 
     /// TODO: Doc comments
-    /*pub async fn spawn<B : ComponentBundle + 'static>(&self, bundle : B) -> Entity { // TODO: Immediately reserve space for the entities.
+    pub async fn remove_resource<R : Resource + 'static>(&self) {
         self.world.cmd_queue.write().await.push(Box::new(move |world|
-            Box::pin(self.world.spawn(bundle))
+            Box::pin(async move { world.remove_resource::<R>().await })
         ))
     }
 
     /// TODO: Doc comments
-    pub async fn spawn_batch<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B>) -> impl Iterator<Item = Entity> {
+    pub async fn spawn<B : ComponentBundle + 'static>(&self, bundle : B) { // TODO: Immediately reserve space for the entities.
         self.world.cmd_queue.write().await.push(Box::new(move |world|
-            Box::pin(self.world.spawn_batch(bundles))
+            Box::pin(async move { world.spawn(bundle).await; })
         ))
-    }*/
+    }
 
     /// TODO: Doc comments
-    pub async fn stateless_run_system<S : IntoReadOnlySystem<Params, ()> + IntoStatelessSystem<Params, ()> + 'static, Params>(&self, system : S)
-    where <S as IntoSystem<Params, ()>>::System : System<(), Passed = ()> + ReadOnlySystem<()> + StatelessSystem<()>
+    pub async fn spawn_batch<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B> + 'static) {
+        self.world.cmd_queue.write().await.push(Box::new(move |world|
+            Box::pin(async move { let _ = world.spawn_batch(bundles).await; })
+        ))
+    }
+
+    /// TODO: Doc comments
+    pub async fn run_system<S : IntoReadOnlySystem<Params, ()> + 'static, Params>(&self, system : S)
+    where <S as IntoSystem<Params, ()>>::System : System<(), Passed = ()> + ReadOnlySystem<()>
     {
         self.world.cmd_queue.write().await.push(Box::new(|world| Box::pin(async {
             let mut system = system.into_system();
@@ -80,8 +89,8 @@ impl<'l> Commands<'l> {
     }
 
     /// TODO: Doc comments
-    pub async fn stateless_run_system_mut<S : IntoStatelessSystem<Params, ()> + 'static, Params>(&self, system : S)
-    where <S as IntoSystem<Params, ()>>::System : System<(), Passed = ()> + StatelessSystem<()>
+    pub async fn run_system_mut<S : IntoSystem<Params, ()> + 'static, Params>(&self, system : S)
+    where <S as IntoSystem<Params, ()>>::System : System<(), Passed = ()>
     {
         self.world.cmd_queue.write().await.push(Box::new(|world| Box::pin(async {
             let mut system = system.into_system();
@@ -93,9 +102,9 @@ impl<'l> Commands<'l> {
 }
 
 
-unsafe impl<'l> Query for Commands<'l> {
+unsafe impl Query for Commands {
 
-    type Item<'world, 'state> = Commands<'world>;
+    type Item = Commands;
 
     type State = ();
 
@@ -103,7 +112,7 @@ unsafe impl<'l> Query for Commands<'l> {
         ()
     }
 
-    unsafe fn acquire<'world, 'state>(world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
+    unsafe fn acquire(world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         Poll::Ready(QueryAcquireResult::Ready(Commands{ world }))
     }
 

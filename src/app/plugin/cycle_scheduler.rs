@@ -8,7 +8,7 @@ use crate::resource::ResourceStorage;
 use crate::schedule::ScheduleStorage;
 use crate::schedule::label::{ ScheduleLabel, Always, PreStartup, Startup, Cycle, Shutdown, PostShutdown };
 use crate::schedule::system::TypeErasedSystem;
-use crate::util::rwlock::RwLockWriteGuard;
+use crate::util::rwlock::{RwLock, RwLockWriteGuard};
 use crate::util::sparsevec::SparseVec;
 use core::pin::Pin;
 use core::task::{ Context, Poll };
@@ -16,6 +16,7 @@ use core::mem::MaybeUninit;
 use core::cell::UnsafeCell;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use alloc::sync::Arc;
 
 
 /// A good default system scheduler.
@@ -70,10 +71,10 @@ impl CycleSchedulerPlugin {
 
     /// Runs the application using this cycle scheduler.
     async fn run(self, mut app : App) -> AppExit {
-        let world     = World::new_with( ResourceStorage::new_with(app.take_resources()) );
-        let schedules = app.take_schedules();
+        let world     = Arc::new(World::new_with( ResourceStorage::new_with(app.take_resources()) ));
+        let schedules = Arc::new(app.take_schedules());
 
-        let scheduler = CycleSchedulerFuture::new(&world, &schedules);
+        let scheduler = CycleSchedulerFuture::new(world, schedules);
         scheduler.await
     }
 
@@ -82,22 +83,22 @@ impl CycleSchedulerPlugin {
 
 
 /// A [`Future`] which handles running schedules as needed.
-struct CycleSchedulerFuture<'l> {
+struct CycleSchedulerFuture {
 
     /// The current state of this scheduler.
     state          : CycleSchedulerState,
 
     /// The [`World`] to operate on.
-    world          : &'l World,
+    world          : Arc<World>,
 
     /// The schedules in the app.
-    schedules      : &'l ScheduleStorage,
+    schedules      : Arc<ScheduleStorage>,
 
     /// The currently running [`Always`] futures.
-    always_futures : Vec<Pin<Box<dyn Future<Output = ()> + 'l>>>,
+    always_futures : Vec<Pin<Box<dyn Future<Output = ()>>>>,
 
     /// The currently running futures.
-    futures        : SparseVec<Pin<Box<dyn Future<Output = ()> + 'l>>>
+    futures        : SparseVec<Pin<Box<dyn Future<Output = ()>>>>
 
 }
 
@@ -125,10 +126,10 @@ enum CycleSchedulerState {
     PostShutdown
 }
 
-impl<'l> CycleSchedulerFuture<'l> {
+impl CycleSchedulerFuture {
 
     /// Creates a new [`CycleSchedulerFuture`] from a [`World`] and some [`System`](crate::system::System)s.
-    fn new(world : &'l World, schedules : &'l ScheduleStorage) -> Self {
+    fn new(world : Arc<World>, schedules : Arc<ScheduleStorage>) -> Self {
         Self {
             state          : CycleSchedulerState::Init,
             world,
@@ -141,9 +142,13 @@ impl<'l> CycleSchedulerFuture<'l> {
     /// TODO: Doc comment
     fn run_label_always<L : ScheduleLabel + 'static>(&mut self, label : L) {
         self.always_futures.append(&mut self.schedules.get_schedule(label)
-            .into_iter().map::<_, _>(|system| Box::pin(async {
-                SystemCycleFuture::new(self.world, system.write().await).await
-            }) as _)
+            .into_iter().map(|system| {
+                let world  = Arc::clone(&self.world);
+                let system = RwLock::arc_clone(&system);
+                Box::pin(async move {
+                    SystemCycleFuture::new(world, system.write().await).await
+                }) as _
+            })
             .collect::<Vec<_>>()
         );
     }
@@ -151,14 +156,18 @@ impl<'l> CycleSchedulerFuture<'l> {
     /// Adds every system under the given label to the running futures.
     fn run_label_oneshot<L : ScheduleLabel + 'static>(&mut self, label : L) {
         self.futures.append(&mut self.schedules.get_schedule(label)
-            .into_iter().map::<_, _>(|system| Box::pin(async{
-                let mut system = system.write().await;
-                // SAFETY: `ScheduleStorage::add_systems` is the only way to add systems.
-                //         It takes a value implementing `IntoScheduledSystemConfig`. The
-                //         implementors of `IntoScheduledSystemConfig` are responsible for
-                //         ensuring that this system is valid.
-                unsafe{ system.acquire_and_run((), self.world) }.await;
-            }) as _)
+            .into_iter().map(|system| {
+                let world  = Arc::clone(&self.world);
+                let system = RwLock::arc_clone(&system);
+                Box::pin(async move {
+                    let mut system = system.write().await;
+                    // SAFETY: `ScheduleStorage::add_systems` is the only way to add systems.
+                    //         It takes a value implementing `IntoScheduledSystemConfig`. The
+                    //         implementors of `IntoScheduledSystemConfig` are responsible for
+                    //         ensuring that this system is valid.
+                    unsafe{ system.acquire_and_run((), Arc::clone(&world)) }.await;
+                }) as _
+            })
             .collect::<Vec<_>>()
         );
     }
@@ -168,18 +177,22 @@ impl<'l> CycleSchedulerFuture<'l> {
     /// These systems will be wrapped in [`SystemCycleFuture`], and will loop until the app begins to exit.
     fn run_label_cycle<L : ScheduleLabel + 'static>(&mut self, label : L) {
         self.futures.append(&mut self.schedules.get_schedule(label)
-            .into_iter().map::<_, _>(|system| Box::pin(async {
-                SystemCycleFuture::new(self.world, system.write().await).await
-            }) as _)
+            .into_iter().map(|system| {
+                let world  = Arc::clone(&self.world);
+                let system = RwLock::arc_clone(&system);
+                Box::pin(async move {
+                    SystemCycleFuture::new(Arc::clone(&world), system.write().await).await
+                }) as _
+            })
             .collect::<Vec<_>>()
         );
     }
 
 }
 
-impl<'l> Unpin for CycleSchedulerFuture<'l> { }
+impl Unpin for CycleSchedulerFuture { }
 
-impl<'l> Future for CycleSchedulerFuture<'l> {
+impl Future for CycleSchedulerFuture {
     type Output = AppExit;
 
     fn poll(mut self : Pin<&mut Self>, ctx : &mut Context<'_>) -> Poll<Self::Output> {
@@ -194,7 +207,7 @@ impl<'l> Future for CycleSchedulerFuture<'l> {
 
         if let Poll::Ready(mut cmd_queue) = self.world.cmd_queue.try_write() {
             for cmd in cmd_queue.drain(..) {
-                let fut = cmd(self.world);
+                let fut = cmd(Arc::clone(&self.world));
                 self.futures.push(fut);
             }
         }
@@ -246,31 +259,31 @@ impl<'l> Future for CycleSchedulerFuture<'l> {
 }
 
 
-/// A [`Future`] that runs a [`System`](crate::system::System) repeatedly until the app beings to exit.
-struct SystemCycleFuture<'l> {
+/// A [`Future`] that runs a [`System`](crate::system::System) repeatedly until the app begins to exit.
+struct SystemCycleFuture {
 
     /// The world to operate on.
-    world  : &'l World,
+    world  : Arc<World>,
 
     /// The system to loop repeatedly.
     system : UnsafeCell<RwLockWriteGuard<Box<dyn TypeErasedSystem<(), ()>>>>,
 
     /// The currently running future.
-    future : MaybeUninit<Pin<Box<dyn Future<Output = ()> + 'l>>>
+    future : MaybeUninit<Pin<Box<dyn Future<Output = ()>>>>
 
 }
 
-impl<'l> SystemCycleFuture<'l> {
+impl SystemCycleFuture {
 
     /// Create a new [`SystemCycleFuture`] from a [`World`] and [`TypeErasedSystem`].
-    fn new(world : &'l World, system : RwLockWriteGuard<Box<dyn TypeErasedSystem<(), ()>>>) -> Self {
+    fn new(world : Arc<World>, system : RwLockWriteGuard<Box<dyn TypeErasedSystem<(), ()>>>) -> Self {
         let mut cycle = Self {
             world,
             system : UnsafeCell::new(system),
             future : MaybeUninit::uninit()
         };
         cycle.future.write(Box::pin(Self::cycle(
-            cycle.world,
+            Arc::clone(&cycle.world),
             // SAFETY: Nothing else is accessing `cycle.system`, as it was just created.
             unsafe{ &mut*cycle.system.get() }.as_mut()
         )));
@@ -278,7 +291,7 @@ impl<'l> SystemCycleFuture<'l> {
     }
 
     /// Run the given system one time.
-    async fn cycle(world : &'l World, system : &'l mut dyn TypeErasedSystem<(), ()>) {
+    async fn cycle(world : Arc<World>, system : &mut dyn TypeErasedSystem<(), ()>) {
         // SAFETY: `ScheduleStorage::add_systems` is the only way to add systems.
         //         It takes a value implementing `IntoScheduledSystemConfig`. The
         //         implementors of `IntoScheduledSystemConfig` are responsible for
@@ -288,14 +301,14 @@ impl<'l> SystemCycleFuture<'l> {
 
 }
 
-impl<'l> Future for SystemCycleFuture<'l> {
+impl Future for SystemCycleFuture {
     type Output = ();
 
     fn poll(mut self : Pin<&mut Self>, ctx : &mut Context<'_>) -> Poll<Self::Output> {
         // SAFETY: `self.future` is always initialised.
         if let Poll::Ready(_) = unsafe{ self.future.assume_init_mut() }.as_mut().poll(ctx) {
             ctx.waker().wake_by_ref();
-            let world = self.world;
+            let world = Arc::clone(&self.world);
             if (world.is_exiting()) { return Poll::Ready(()); }
             // SAFETY: `self.future` is always initialised.
             //         It will be re-written immediately below.
@@ -309,7 +322,7 @@ impl<'l> Future for SystemCycleFuture<'l> {
     }
 }
 
-impl<'l> Drop for SystemCycleFuture<'l> {
+impl Drop for SystemCycleFuture {
     fn drop(&mut self) {
         // `self.future` is always initialised.
         unsafe{ self.future.assume_init_drop(); }

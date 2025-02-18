@@ -9,14 +9,15 @@ use crate::world::World;
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryValidator };
 use crate::util::variadic::variadic_no_unit;
 use core::task::Poll;
+use alloc::sync::Arc;
 
 
 unsafe impl Query for () {
-    type Item<'world, 'state> = ();
+    type Item = ();
 
     fn init_state() -> Self::State { () }
 
-    unsafe fn acquire<'world, 'state>(_world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
+    unsafe fn acquire(_world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         Poll::Ready(QueryAcquireResult::Ready(()))
     }
 
@@ -29,14 +30,14 @@ unsafe impl ReadOnlyQuery for () { }
 
 
 unsafe impl<Q : Query> Query for Option<Q> {
-    type Item<'world, 'state> = Option<<Q as Query>::Item<'world, 'state>>;
+    type Item = Option<<Q as Query>::Item>;
     type State = <Q as Query>::State;
 
     fn init_state() -> Self::State {
         <Q as Query>::init_state()
     }
 
-    unsafe fn acquire<'world, 'state>(world : &'world World, state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
+    unsafe fn acquire(world : Arc<World>, state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         // SAFETY: TODO
         match (unsafe{ <Q as Query>::acquire(world, state) }) {
             Poll::Ready(QueryAcquireResult::Ready(out))          => Poll::Ready(QueryAcquireResult::Ready(Some(out))),
@@ -60,7 +61,7 @@ macro impl_query_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) {
     #[allow(non_snake_case)]
     $( #[ $meta ] )*
     unsafe impl< $( $generic : Query ),* > Query for ( $( $generic , )* ) {
-        type Item<'world, 'state> = ( $( <$generic as Query>::Item<'world, 'state> , )* );
+        type Item = ( $( <$generic as Query>::Item , )* );
         type State = ( $( <$generic as Query>::State , )* );
 
         fn init_state() -> Self::State {
@@ -68,10 +69,10 @@ macro impl_query_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) {
             ( $( $generic , )* )
         }
 
-        unsafe fn acquire<'world, 'state>(world : &'world World, state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
+        unsafe fn acquire(world : Arc<World>, state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
             $(
                 // SAFETY: TODO
-                let $generic = match (unsafe{ <$generic as Query>::acquire(world, &mut state.${index()}) }) {
+                let $generic = match (unsafe{ <$generic as Query>::acquire(Arc::clone(&world), &mut state.${index()}) }) {
                     Poll::Ready(QueryAcquireResult::Ready(out))            => out,
                     #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
                     Poll::Ready(QueryAcquireResult::DoesNotExist { name }) => { return Poll::Ready(QueryAcquireResult::DoesNotExist { name }); },

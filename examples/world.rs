@@ -1,4 +1,5 @@
 use axecs::prelude::*;
+use std::sync::Arc;
 
 
 #[derive(Component, Debug)]
@@ -15,7 +16,7 @@ struct MyComponentTwo {
 
 #[async_std::main]
 async fn main() {
-    let world = World::new();
+    let world = Arc::new(World::new());
 
     let mut query_my_components = world.query_mut::<(Entities<(&mut MyComponentOne), With<MyComponentTwo>>)>();
 
@@ -61,13 +62,8 @@ async fn main() {
 
 
 async fn print_my_components(
-        q_my_components : Entities<'_, (Entity, &MyComponentOne, &MyComponentTwo)>,
-    mut label           : Local<'_, Option<char>>
+    q_my_components : Entities<(Entity, &MyComponentOne, &MyComponentTwo)>
 ) {
-    let next_label = if let Some(label) = *label { ((label as u8) + 1) as char } else { 'A' };
-    println!("{}", next_label);
-    *label = Some(next_label);
-
     for (entity, one, two) in &q_my_components {
         println!("{:?} {} {}", entity, one.value, two.message);
     }

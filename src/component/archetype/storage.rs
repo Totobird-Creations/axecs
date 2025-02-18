@@ -235,12 +235,12 @@ impl ArchetypeStorage {
     /// Gets the corresponding [`Archetype`] (creating it if needed), then adds several rows, "spawning" entities.
     ///
     /// This is more efficient than [`ArchetypeStorage::spawn`], but has the downside of only being able to spawn entities with the same [`ComponentBundle`] type.
-    /// 
+    ///
     /// # Panics
     /// Panics if the given [`ComponentBundle`]s are not valid.
     /// See [`BundleValidator`](crate::component::bundle::BundleValidator).
     #[track_caller]
-    pub async fn spawn_batch<C : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = C>) -> impl Iterator<Item = Entity> {
+    pub async fn spawn_batch<'l, C : ComponentBundle + 'static>(&'l self, bundles : impl IntoIterator<Item = C> + 'l) -> impl Iterator<Item = Entity> {
         C::validate().panic_on_violation();
         // SAFETY: The archetype rules were checked in the line above.
         unsafe{ self.spawn_batch_unchecked::<C>(bundles).await }
@@ -252,7 +252,7 @@ impl ArchetypeStorage {
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ComponentBundle`] does not violate the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
-    pub async unsafe fn spawn_batch_unchecked<C : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = C>) -> impl Iterator<Item = Entity> {
+    pub async unsafe fn spawn_batch_unchecked<'l, C : ComponentBundle + 'static>(&'l self, bundles : impl IntoIterator<Item = C> + 'l) -> impl Iterator<Item = Entity> {
         let mut archetype = self.get_mut_or_create::<C>().await;
         let mut entities  = Vec::new();
         for bundle in bundles {
@@ -279,7 +279,7 @@ impl ArchetypeStorage {
     }
 
     /// Resmoves a row from an [`Archetype`] without checking that it exists.
-    /// 
+    ///
     /// # Safety:
     /// The caller is responsible for ensuring that the [`Archetype`] and row exist.
     pub async fn despawn_unchecked(&self, entity : Entity) {
@@ -296,7 +296,7 @@ impl ArchetypeStorage {
     /// Panics if the given [`ReadOnlyComponentQuery`] is not valid.
     /// See [`QueryValidator`](crate::query::QueryValidator).
     #[track_caller]
-    pub async fn query<'l, Q : ReadOnlyComponentQuery + 'l, F : ComponentFilter>(&'l self) -> Entities<'l, Q, F> {
+    pub async fn query<'l, Q : ReadOnlyComponentQuery + 'l, F : ComponentFilter>(&'l self) -> Entities<Q, F> {
         Q::validate().panic_on_violation();
         // SAFETY: The archetype rules were checked in the line above.
         unsafe{ self.query_unchecked::<'l, Q, F>().await }
@@ -306,7 +306,7 @@ impl ArchetypeStorage {
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ReadOnlyComponentQuery`] does not violate the borrow checker rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
-    pub async unsafe fn query_unchecked<'l, Q : ReadOnlyComponentQuery + 'l, F : ComponentFilter>(&'l self) -> Entities<'l, Q, F> {
+    pub async unsafe fn query_unchecked<'l, Q : ReadOnlyComponentQuery + 'l, F : ComponentFilter>(&'l self) -> Entities<Q, F> {
         // SAFETY: The caller is responsible for ensuring that the archetype rules are not violated.
         FunctionCallFuture::new(|| unsafe{ Entities::<Q, F>::acquire_archetypes_unchecked(self) }).await
     }
@@ -317,7 +317,7 @@ impl ArchetypeStorage {
     /// Panics if the given [`ReadOnlyComponentQuery`] is not valid.
     /// See [`QueryValidator`](crate::query::QueryValidator).
     #[track_caller]
-    pub async fn query_mut<'l, Q : ComponentQuery + 'l, F : ComponentFilter>(&'l self) -> Entities<'l, Q, F> {
+    pub async fn query_mut<'l, Q : ComponentQuery + 'l, F : ComponentFilter>(&'l self) -> Entities<Q, F> {
         Q::validate().panic_on_violation();
         // SAFETY: The archetype rules were checked in the line above.
         unsafe{ self.query_unchecked_mut::<'l, Q, F>().await }
@@ -327,8 +327,8 @@ impl ArchetypeStorage {
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ComponentQuery`] does not violate the borrow checker rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
-    pub async unsafe fn query_unchecked_mut<'l, Q : ComponentQuery + 'l, F : ComponentFilter>(&'l self) -> Entities<'l, Q, F> {
-        // SAFETY: The caller is responsible for ensuring that the archetype rules are not violated.
+    pub async unsafe fn query_unchecked_mut<'l, Q : ComponentQuery + 'l, F : ComponentFilter>(&'l self) -> Entities<Q, F> {
+        // SAFETY: The caller is responsible for ensuring that the archetype rules are not world.
         FunctionCallFuture::new(|| unsafe{ Entities::<Q, F>::acquire_archetypes_unchecked(self) }).await
     }
 

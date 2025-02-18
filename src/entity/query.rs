@@ -3,32 +3,33 @@
 
 use crate::world::World;
 use crate::component::query::{ ComponentQuery, ReadOnlyComponentQuery, ComponentFilter, True };
-use crate::component::archetype::{ Archetype, ArchetypeStorage };
+use crate::component::archetype::{ ArchetypeStorage, Archetype };
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryValidator };
 use crate::util::rwlock::RwLockWriteGuard;
 use core::task::Poll;
 use core::marker::PhantomData;
 use alloc::vec::Vec;
+use alloc::sync::Arc;
 
 
 /// TODO: Doc comments
-pub struct Entities<'l, Q : ComponentQuery, F : ComponentFilter = True> {
+pub struct Entities<Q : ComponentQuery, F : ComponentFilter = True> {
 
     /// TODO: Doc comments
     archetypes : Vec<RwLockWriteGuard<Archetype>>,
 
     /// TODO: Doc comments
-    marker     : PhantomData<(&'l Q, fn(F) -> bool)>
+    marker     : PhantomData<(Q, fn(F) -> bool)>
 
 }
 
-impl<Q : ComponentQuery, F : ComponentFilter> Entities<'_, Q, F> {
+impl<Q : ComponentQuery, F : ComponentFilter> Entities<Q, F> {
 
     /// TODO: Doc comments
     ///
     /// # Safety
     /// The caller is responsible for ensuring that `Q` follows the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
-    pub(crate) unsafe fn acquire_archetypes_unchecked<'l>(archetypes : &'l ArchetypeStorage) -> Poll<Entities<'l, Q, F>> {
+    pub(crate) unsafe fn acquire_archetypes_unchecked(archetypes : &ArchetypeStorage) -> Poll<Entities<Q, F>> {
         match (archetypes.try_read_raw()) {
             Poll::Ready(inner) => {
                 match (inner.archetype_components()
@@ -55,12 +56,12 @@ impl<Q : ComponentQuery, F : ComponentFilter> Entities<'_, Q, F> {
 
 }
 
-unsafe impl<Q : ComponentQuery + 'static, F : ComponentFilter> Query for Entities<'_, Q, F> {
-    type Item<'world, 'state> = Entities<'world, Q, F>;
+unsafe impl<Q : ComponentQuery + 'static, F : ComponentFilter> Query for Entities<Q, F> {
+    type Item = Entities<Q, F>;
 
     fn init_state() -> Self::State { () }
 
-    unsafe fn acquire<'world, 'state>(world : &'world World, _state : &'state mut Self::State) -> Poll<QueryAcquireResult<Self::Item<'world, 'state>>> {
+    unsafe fn acquire(world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         // SAFETY: TODO
         unsafe{ Self::acquire_archetypes_unchecked(world.archetypes()) }.map(|out| QueryAcquireResult::Ready(out))
     }
@@ -71,25 +72,25 @@ unsafe impl<Q : ComponentQuery + 'static, F : ComponentFilter> Query for Entitie
 
 }
 
-unsafe impl<'l, Q : ReadOnlyComponentQuery + 'static, F : ComponentFilter> ReadOnlyQuery for Entities<'l, Q, F> { }
+unsafe impl<Q : ReadOnlyComponentQuery + 'static, F : ComponentFilter> ReadOnlyQuery for Entities<Q, F> { }
 
 
-impl<'l, Q : ComponentQuery, F : ComponentFilter> Entities<'l, Q, F> {
+impl<Q : ComponentQuery, F : ComponentFilter> Entities<Q, F> {
 
     /// TODO: Doc comments
-    pub fn iter(&'l self) -> impl Iterator<Item = Q::Item<'l>> {
+    pub fn iter(&self) -> impl Iterator<Item = Q::Item<'_>> {
         <&Self as IntoIterator>::into_iter(self)
     }
 
     /// TODO: Doc comments
-    pub fn iter_mut(&'l mut self) -> impl Iterator<Item = Q::ItemMut<'l>> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = Q::ItemMut<'_>> {
         <&mut Self as IntoIterator>::into_iter(self)
     }
 
 }
 
 
-impl<'l, 'k, Q : ComponentQuery, F : ComponentFilter> IntoIterator for &'l Entities<'k, Q, F> {
+impl<'l, Q : ComponentQuery, F : ComponentFilter> IntoIterator for &'l Entities<Q, F> {
     type Item     = Q::Item<'l>;
     type IntoIter = impl Iterator<Item = Self::Item>;
 
@@ -102,7 +103,7 @@ impl<'l, 'k, Q : ComponentQuery, F : ComponentFilter> IntoIterator for &'l Entit
 }
 
 
-impl<'l, 'k, Q : ComponentQuery, F : ComponentFilter> IntoIterator for &'l mut Entities<'k, Q, F> {
+impl<'l, Q : ComponentQuery, F : ComponentFilter> IntoIterator for &'l mut Entities<Q, F> {
     type Item     = Q::ItemMut<'l>;
     type IntoIter = impl Iterator<Item = Self::Item>;
 

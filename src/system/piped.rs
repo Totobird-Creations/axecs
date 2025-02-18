@@ -2,9 +2,10 @@
 
 
 use crate::world::World;
-use crate::system::{ System, ReadOnlySystem, StatelessSystem, IntoSystem, IntoReadOnlySystem, IntoStatelessSystem, SystemPassable };
+use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, SystemPassable };
 use core::marker::PhantomData;
 use core::ops::{ Deref, DerefMut };
+use alloc::sync::Arc;
 
 
 pub struct IntoPipedSystem<APassed, A, AParams, BPassed, B, BParams, Return>
@@ -70,15 +71,6 @@ where   A         : IntoReadOnlySystem<AParams, BPassed>,
         B::System : ReadOnlySystem<Return, Passed = In<BPassed>>
 { }
 
-unsafe impl<APassed, A, AParams, BPassed, B, BParams, Return>
-    IntoStatelessSystem<(), Return>
-    for IntoPipedSystem<APassed, A, AParams, BPassed, B, BParams, Return>
-where   A         : IntoStatelessSystem<AParams, BPassed>,
-        B         : IntoStatelessSystem<BParams, Return>,
-        A::System : StatelessSystem<BPassed, Passed = APassed>,
-        B::System : StatelessSystem<Return, Passed = In<BPassed>>
-{ }
-
 
 /// TODO: Doc comment
 pub struct PipedSystem<APassed, A, BPassed, B, Return>
@@ -109,9 +101,9 @@ where   A : System<BPassed, Passed = APassed>,
     type Passed = APassed;
 
     #[track_caller]
-    async unsafe fn acquire_and_run(&mut self, a_passed : Self::Passed, world : &World) -> Return {
+    async unsafe fn acquire_and_run(&mut self, a_passed : Self::Passed, world : Arc<World>) -> Return {
         // SAFETY: TODO
-        let b_passed = unsafe{ self.a.acquire_and_run(a_passed, world) }.await;
+        let b_passed = unsafe{ self.a.acquire_and_run(a_passed, Arc::clone(&world)) }.await;
         // SAFETY: TODO
         unsafe{ self.b.acquire_and_run(In(b_passed), world) }.await
     }
@@ -124,19 +116,12 @@ where   A : ReadOnlySystem<BPassed, Passed = APassed>,
         B : ReadOnlySystem<Return, Passed = In<BPassed>>
 { }
 
-unsafe impl<APassed, A, BPassed, B, Return>
-    StatelessSystem<Return>
-    for PipedSystem<APassed, A, BPassed, B, Return>
-where   A : StatelessSystem<BPassed, Passed = APassed>,
-        B : StatelessSystem<Return, Passed = In<BPassed>>
-{ }
-
 
 /// TODO: Doc comment
 pub struct In<T> (
 
     /// TODO: Doc comment
-    pub(super) T
+    pub T
 
 );
 
@@ -152,11 +137,5 @@ impl<T> Deref for In<T> {
 impl<T> DerefMut for In<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
-    }
-}
-
-impl<T> In<T> {
-    pub fn into_inner(self) -> T {
-        self.0
     }
 }

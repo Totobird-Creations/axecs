@@ -37,9 +37,9 @@ async fn main() {
 
 
 async fn print_my_values(
-        cmds : Commands<'_>,
+        cmds : Commands,
         one  : Res<&MyResourceOne>,
-    mut two  : Scoped<'_, Res<&MyResourceTwo>>
+    mut two  : Scoped<Res<&MyResourceTwo>>
 ) {
     sleep(Duration::from_millis(1)).await;
     println!("one: {}", one.value);

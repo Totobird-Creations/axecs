@@ -22,12 +22,10 @@ pub use passed::*;
 mod state;
 pub use state::*;
 
-mod param;
-pub use param::*;
-
 
 use crate::world::World;
 use core::marker::PhantomData;
+use alloc::sync::Arc;
 
 
 /// TODO: Doc comment
@@ -37,16 +35,13 @@ pub trait System<Return> {
     type Passed = ();
 
     /// TODO: Doc comment
-    async unsafe fn acquire_and_run(&mut self, passed : Self::Passed, world : &World) -> Return;
+    async unsafe fn acquire_and_run(&mut self, passed : Self::Passed, world : Arc<World>) -> Return;
 
 }
 
 
 /// TODO: Doc comment
 pub unsafe trait ReadOnlySystem<Return> : System<Return> { }
-
-/// TODO: Doc comment
-pub unsafe trait StatelessSystem<Return> : System<Return> { }
 
 
 /// TODO: Doc comment
@@ -167,11 +162,6 @@ pub unsafe trait IntoReadOnlySystem<Params, Return> : IntoSystem<Params, Return>
 where <Self as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return>
 { }
 
-/// TODO: Doc comment
-pub unsafe trait IntoStatelessSystem<Params, Return> : IntoSystem<Params, Return>
-where <Self as IntoSystem<Params, Return>>::System : StatelessSystem<Return>
-{ }
-
 
 /// TODO: Doc comment
 pub trait SystemPassable { }
@@ -187,7 +177,7 @@ mod tests {
         where S::System : System<(), Passed = ()>
     { }
 
-    async fn simple_system( _q : Entities<'_, ()> ) -> () { }
+    async fn simple_system( _q : Entities<()> ) -> () { }
 
     async fn system_no_params( ) -> () { }
 

@@ -3,6 +3,7 @@
 
 use crate::world::World;
 use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
+use alloc::sync::Arc;
 
 
 /// TODO: Doc comment
@@ -40,7 +41,7 @@ where <Self as IntoSystem<Params, bool>>::System : ReadOnlySystem<bool>
 /// TODO: Doc comment
 pub(crate) struct ConditionNoneMarkerSystem();
 impl System<bool> for ConditionNoneMarkerSystem {
-    async unsafe fn acquire_and_run(&mut self, _passed : Self::Passed, _world : &World) -> bool {
+    async unsafe fn acquire_and_run(&mut self, _passed : Self::Passed, _world : Arc<World>) -> bool {
         unreachable!()
     }
 }

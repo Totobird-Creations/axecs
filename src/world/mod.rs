@@ -9,8 +9,8 @@ use crate::resource::{ Resource, ResourceStorage, ResourceCellReadGuard, Resourc
 use crate::entity::Entity;
 use crate::component::bundle::ComponentBundle;
 use crate::component::archetype::ArchetypeStorage;
-use crate::query::{ Query, ReadOnlyQuery, StatelessQuery, PersistentQueryState, StatelessQueryItem };
-use crate::system::{ IntoSystem, IntoReadOnlySystem, IntoStatelessSystem, ReadOnlySystem, StatelessSystem, PersistentSystemState };
+use crate::query::{ Query, ReadOnlyQuery, PersistentQueryState };
+use crate::system::{ IntoSystem, IntoReadOnlySystem, ReadOnlySystem, PersistentSystemState };
 use crate::app::AppExit;
 use crate::schedule::system::TypeErasedSystem;
 use crate::util::rwlock::RwLock;
@@ -20,6 +20,7 @@ use core::sync::atomic::{ AtomicU8, Ordering };
 use core::pin::Pin;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
+use alloc::sync::Arc;
 
 
 /// A wrapper for an application's exiting state, resources, entities, etc.
@@ -44,7 +45,7 @@ pub struct World {
     archetypes  : ArchetypeStorage,
 
     /// TODO: Doc comments
-    pub(crate) cmd_queue : RwLock<Vec<Box<dyn for<'l> FnOnce(&'l World) -> Pin<Box<dyn Future<Output = ()> + 'l>>>>>
+    pub(crate) cmd_queue : RwLock<Vec<Box<dyn FnOnce(Arc<World>) -> Pin<Box<dyn Future<Output = ()>>>>>>
 
 }
 
@@ -144,28 +145,28 @@ impl World {
     /// Inserts a [`Resource`] into this world, overwriting any previous resource of the same type.
     ///
     /// This is more efficient than [`World::replace_resource`], as it doesn't have to wait for the individual resource to lock.
-    pub async fn insert_resource<R : Resource + 'static>(&self, resource : R) {
+    pub async fn insert_resource<R : Resource + 'static>(self : &Arc<Self>, resource : R) {
         self.resources.insert::<R>(resource).await
     }
 
     /// Inserts a [`Resource`] into this world, returning the old resource of the same type if it existed.
     ///
     /// Use [`World::insert_resource`] if you don't need the old value.
-    pub async fn replace_resource<R : Resource + 'static>(&self, resource : R) -> Option<R> {
+    pub async fn replace_resource<R : Resource + 'static>(self : &Arc<Self>, resource : R) -> Option<R> {
         self.resources.replace::<R>(resource).await
     }
 
     /// Removes a [`Resource`] from this world.
     ///
     /// This is more efficient than [`World::take_resource`], as it doesn't have to wait for the individual resource to lock.
-    pub async fn remove_resource<R : Resource + 'static>(&self) {
+    pub async fn remove_resource<R : Resource + 'static>(self : &Arc<Self>) {
         self.resources.remove::<R>().await
     }
 
     /// Removes a [`Resource`] from this world, returning it if it existed.
     ///
     /// Use [`World::remove_resource`] if you don't need the old value.
-    pub async fn take_resource<R : Resource + 'static>(&self) -> Option<R> {
+    pub async fn take_resource<R : Resource + 'static>(self : &Arc<Self>) -> Option<R> {
         self.resources.take::<R>().await
     }
 
@@ -186,7 +187,7 @@ impl World {
     /// Panics if the given [`ComponentBundle`] is not valid.
     /// See [`BundleValidator`](crate::component::bundle::BundleValidator).
     #[track_caller]
-    pub async fn spawn<B : ComponentBundle + 'static>(&self, bundle : B) -> Entity {
+    pub async fn spawn<B : ComponentBundle + 'static>(self : &Arc<Self>, bundle : B) -> Entity {
         self.archetypes.spawn::<B>(bundle).await
     }
 
@@ -194,7 +195,7 @@ impl World {
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ComponentBundle`] does not violate the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
-    pub async unsafe fn spawn_unchecked<B : ComponentBundle + 'static>(&self, bundle : B) -> Entity {
+    pub async unsafe fn spawn_unchecked<B : ComponentBundle + 'static>(self : &Arc<Self>, bundle : B) -> Entity {
         unsafe{ self.archetypes.spawn_unchecked::<B>(bundle).await }
     }
 
@@ -206,7 +207,7 @@ impl World {
     /// Panics if the given [`ComponentBundle`]s are not valid.
     /// See [`BundleValidator`](crate::component::bundle::BundleValidator).
     #[track_caller]
-    pub async fn spawn_batch<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B>) -> impl Iterator<Item = Entity> {
+    pub async fn spawn_batch<'l, B : ComponentBundle + 'static>(self : &'l Arc<Self>, bundles : impl IntoIterator<Item = B> + 'l) -> impl Iterator<Item = Entity> {
         self.archetypes.spawn_batch::<B>(bundles).await
     }
 
@@ -216,12 +217,12 @@ impl World {
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`ComponentBundle`] does not violate the archetype rules. See [`BundleValidator`](crate::component::bundle::BundleValidator).
-    pub async unsafe fn spawn_batch_unchecked<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B>) -> impl Iterator<Item = Entity> {
+    pub async unsafe fn spawn_batch_unchecked<'l, B : ComponentBundle + 'static>(self : &'l Arc<Self>, bundles : impl IntoIterator<Item = B> + 'l) -> impl Iterator<Item = Entity> {
         unsafe{ self.archetypes.spawn_batch_unchecked::<B>(bundles).await }
     }
 
     /// Removes an entity.
-    pub async fn despawn(&self, entity : Entity) {
+    pub async fn despawn(self : &Arc<Self>, entity : Entity) {
         self.archetypes.despawn(entity).await
     }
 
@@ -229,127 +230,69 @@ impl World {
     ///
     /// # Safety
     /// You are responsible for ensuring that the given entity exists.
-    pub async unsafe fn despawn_unchecked(&self, entity : Entity) {
+    pub async unsafe fn despawn_unchecked(self : &Arc<Self>, entity : Entity) {
         self.archetypes.despawn_unchecked(entity).await
     }
 
 
     /// TODO: Doc comments
     #[track_caller]
-    pub async fn stateless_acquire_query<Q : ReadOnlyQuery + StatelessQuery>(&self) -> StatelessQueryItem<Q> {
-        Q::validate().panic_on_violation();
-        // SAFETY: TODO
-        unsafe{ self.stateless_acquire_query_unchecked::<Q>() }.await
-    }
-
-    /// TODO: Doc comments
-    pub async unsafe fn stateless_acquire_query_unchecked<Q : ReadOnlyQuery + StatelessQuery>(&self) -> StatelessQueryItem<Q> {
-        // SAFETY: TODO
-        unsafe{ StatelessQueryItem::<Q>::new(self) }.await
-    }
-
-    /// TODO: Doc comments
-    #[track_caller]
-    pub async fn stateless_acquire_query_mut<Q : StatelessQuery>(&self) -> StatelessQueryItem<Q> {
-        Q::validate().panic_on_violation();
-        // SAFETY: TODO
-        unsafe{ self.stateless_acquire_query_unchecked_mut::<Q>() }.await
-    }
-
-    /// TODO: Doc comments
-    pub async unsafe fn stateless_acquire_query_unchecked_mut<Q : StatelessQuery>(&self) -> StatelessQueryItem<Q> {
-        // SAFETY: TODO
-        unsafe{ StatelessQueryItem::<Q>::new(self) }.await
-    }
-
-    /// TODO: Doc comments
-    #[track_caller]
-    pub fn query<Q : ReadOnlyQuery>(&self) -> PersistentQueryState<'_, Q> {
+    pub fn query<Q : ReadOnlyQuery>(self : &Arc<Self>) -> PersistentQueryState<Q> {
         Q::validate().panic_on_violation();
         // SAFETY: TODO
         unsafe{ self.query_unchecked::<Q>() }
     }
 
     /// TODO: Doc comments
-    pub unsafe fn query_unchecked<Q : ReadOnlyQuery>(&self) -> PersistentQueryState<'_, Q> {
+    pub unsafe fn query_unchecked<Q : ReadOnlyQuery>(self : &Arc<Self>) -> PersistentQueryState<Q> {
         // SAFETY: TODO
-        unsafe{ PersistentQueryState::<Q>::new(self) }
+        unsafe{ PersistentQueryState::<Q>::new(Arc::clone(self)) }
     }
 
     /// TODO: Doc comments
     #[track_caller]
-    pub fn query_mut<Q : Query>(&self) -> PersistentQueryState<'_, Q> {
+    pub fn query_mut<Q : Query>(self : &Arc<Self>) -> PersistentQueryState<Q> {
         Q::validate().panic_on_violation();
         // SAFETY: TODO
         unsafe{ self.query_unchecked_mut::<Q>() }
     }
 
     /// TODO: Doc comments
-    pub unsafe fn query_unchecked_mut<Q : Query>(&self) -> PersistentQueryState<'_, Q> {
+    pub unsafe fn query_unchecked_mut<Q : Query>(self : &Arc<Self>) -> PersistentQueryState<Q> {
         // SAFETY: TODO
-        unsafe{ PersistentQueryState::<Q>::new(self) }
+        unsafe{ PersistentQueryState::<Q>::new(Arc::clone(self)) }
     }
 
 
     /// TODO: Doc comments
     #[track_caller]
-    pub fn stateless_run_system<S : IntoReadOnlySystem<Params, Return> + IntoStatelessSystem<Params, Return>, Params, Return>(&self, _system : S) -> ()
-    where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return> + StatelessSystem<Return>
-    {
-        todo!()
-    }
-
-    /// TODO: Doc comments
-    pub fn stateless_run_system_unchecked<S : IntoReadOnlySystem<Params, Return> + IntoStatelessSystem<Params, Return>, Params, Return>(&self, _system : S) -> ()
-    where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return> + StatelessSystem<Return>
-    {
-        todo!()
-    }
-
-    /// TODO: Doc comments
-    #[track_caller]
-    pub fn stateless_run_system_mut<S : IntoStatelessSystem<Params, Return>, Params, Return>(&self, _system : S) -> ()
-    where <S as IntoSystem<Params, Return>>::System : StatelessSystem<Return>
-    {
-        todo!()
-    }
-
-    /// TODO: Doc comments
-    pub fn stateless_run_system_unchecked_mut<S : IntoStatelessSystem<Params, Return>, Params, Return>(&self, _system : S) -> ()
-    where <S as IntoSystem<Params, Return>>::System : StatelessSystem<Return>
-    {
-        todo!()
-    }
-
-    /// TODO: Doc comments
-    #[track_caller]
-    pub fn system<S : IntoReadOnlySystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return>
+    pub fn system<S : IntoReadOnlySystem<Params, Return>, Params, Return>(self : &Arc<Self>, system : S) -> PersistentSystemState<S::System, Return>
     where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return>
     {
-        unsafe{ PersistentSystemState::new(self, system.into_system()) }
+        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system()) }
     }
 
     /// TODO: Doc comments
-    pub fn system_unchecked<S : IntoReadOnlySystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return>
+    pub fn system_unchecked<S : IntoReadOnlySystem<Params, Return>, Params, Return>(self : &Arc<Self>, system : S) -> PersistentSystemState<S::System, Return>
     where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return>
     {
-        unsafe{ PersistentSystemState::new(self, system.into_system_unchecked()) }
+        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system_unchecked()) }
     }
 
     /// TODO: Doc comments
     #[track_caller]
-    pub fn system_mut<S : IntoSystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return> {
-        unsafe{ PersistentSystemState::new(self, system.into_system()) }
+    pub fn system_mut<S : IntoSystem<Params, Return>, Params, Return>(self : &Arc<Self>, system : S) -> PersistentSystemState<S::System, Return> {
+        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system()) }
     }
 
     /// TODO: Doc comments
-    pub fn system_unchecked_mut<S : IntoSystem<Params, Return>, Params, Return>(&self, system : S) -> PersistentSystemState<'_, S::System, Return> {
-        unsafe{ PersistentSystemState::new(self, system.into_system_unchecked()) }
+    pub fn system_unchecked_mut<S : IntoSystem<Params, Return>, Params, Return>(self : &Arc<Self>, system : S) -> PersistentSystemState<S::System, Return> {
+        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system_unchecked()) }
     }
 
     /// TODO: Doc comments
-    pub async unsafe fn run_erased_system<Passed, Return>(&self, system : &mut dyn TypeErasedSystem<Passed, Return>, passed : Passed) -> Return {
-        unsafe{ system.acquire_and_run(passed, self) }.await
+    pub async unsafe fn run_erased_system<Passed, Return>(self : &Arc<Self>, system : &mut dyn TypeErasedSystem<Passed, Return>, passed : Passed) -> Return {
+        unsafe{ system.acquire_and_run(passed, Arc::clone(self)) }.await
     }
 
 }

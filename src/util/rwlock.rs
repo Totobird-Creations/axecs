@@ -29,7 +29,7 @@ mod __internal {
         pub(super) value          : UnsafeCell<T>,
 
         /// The lock state.
-        /// 
+        ///
         /// [`u32::MAX`] means the [`RwLock`] is write-locked.
         /// Anything below is the number of read locks.
         pub(super) state          : AtomicU32,
@@ -65,6 +65,11 @@ impl<T> RwLock<T> {
         })
     } }
 
+    /// TODO: Doc comments
+    pub fn arc_clone(rwlock : &Self) -> Self {
+        Self { inner : Arc::clone(&rwlock.inner) }
+    }
+
 }
 
 impl<T> Deref for RwLock<T> {
@@ -77,14 +82,14 @@ impl<T> Deref for RwLock<T> {
 impl<T> RwLock<T> {
 
     /// Returns a [`Future`] which will eventually take ownership of the inner data.
-    /// 
+    ///
     /// The [`RwLock`] will be permanently locked.
     pub fn into_inner(self) -> PendingRwLockOwn<T> {
         PendingRwLockOwn { lock : Some(self.inner) }
     }
 
     /// Tries to take ownership of the inner data.
-    /// 
+    ///
     /// The [`RwLock`] will be permanently locked if this succeeds.
     pub fn try_into_inner(self) -> Poll<T> {
         self.inner.state.compare_exchange(0, u32::MAX, Ordering::Acquire, Ordering::Relaxed).is_ok()

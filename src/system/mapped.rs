@@ -2,8 +2,9 @@
 
 
 use crate::prelude::World;
-use crate::system::{ System, ReadOnlySystem, StatelessSystem, IntoSystem, IntoReadOnlySystem, IntoStatelessSystem };
+use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
 use core::marker::PhantomData;
+use alloc::sync::Arc;
 
 
 /// TODO: Doc comment
@@ -67,14 +68,6 @@ where   A         : IntoReadOnlySystem<AParams, BPassed>,
         A::System : ReadOnlySystem<BPassed, Passed = APassed>
 { }
 
-unsafe impl<APassed, A, AParams, BPassed, B, Return>
-    IntoStatelessSystem<(), Return>
-    for IntoMappedSystem<APassed, A, AParams, BPassed, B, Return>
-where   A         : IntoStatelessSystem<AParams, BPassed>,
-        B         : FnMut(BPassed) -> Return,
-        A::System : StatelessSystem<BPassed, Passed = APassed>
-{ }
-
 
 /// TODO: Doc comment
 pub struct MappedSystem<APassed, A, BPassed, B, Return>
@@ -104,7 +97,7 @@ where   A : System<BPassed, Passed = APassed>,
     type Passed = APassed;
 
     #[track_caller]
-    async unsafe fn acquire_and_run(&mut self, a_passed : Self::Passed, world : &World) -> Return {
+    async unsafe fn acquire_and_run(&mut self, a_passed : Self::Passed, world : Arc<World>) -> Return {
         // SAFETY: TODO
         let b_passed = unsafe{ self.a.acquire_and_run(a_passed, world) }.await;
         (self.b)(b_passed)
@@ -115,12 +108,5 @@ unsafe impl<APassed, A, BPassed, B, Return>
     ReadOnlySystem<Return>
     for MappedSystem<APassed, A, BPassed, B, Return>
 where   A : ReadOnlySystem<BPassed, Passed = APassed>,
-        B : FnMut(BPassed) -> Return
-{ }
-
-unsafe impl<APassed, A, BPassed, B, Return>
-    StatelessSystem<Return>
-    for MappedSystem<APassed, A, BPassed, B, Return>
-where   A : StatelessSystem<BPassed, Passed = APassed>,
         B : FnMut(BPassed) -> Return
 { }
