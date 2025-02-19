@@ -12,6 +12,7 @@ pub use state::*;
 
 
 use crate::world::World;
+use crate::system::SystemId;
 #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
 use crate::util::unqualified::UnqualifiedTypeName;
 use core::task::Poll;
@@ -32,7 +33,7 @@ pub unsafe trait Query : Sized {
     type State = ();
 
     /// TODO: Doc comments
-    fn init_state() -> Self::State; // TODO: Get rid of the lifetime on this method.
+    fn init_state(world : Arc<World>, system_id : Option<SystemId>) -> Self::State; // TODO: Get rid of the lifetime on this method.
 
     /// TODO: Doc comments
     ///

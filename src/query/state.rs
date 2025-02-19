@@ -2,6 +2,7 @@
 
 
 use crate::world::World;
+use crate::system::SystemId;
 use crate::query::{ Query, QueryAcquireResult };
 use core::pin::Pin;
 use core::task::{ Context, Poll };
@@ -25,10 +26,10 @@ impl<Q : Query> PersistentQueryState<Q> {
     ///
     /// # Safety
     /// The caller is responsible for ensuring that the given [`Query`] does not violate the borrow checker rules. See [`QueryValidator`](crate::query::QueryValidator).
-    pub(crate) unsafe fn new(world : Arc<World>) -> Self {
+    pub(crate) unsafe fn new(world : Arc<World>, system_id : Option<SystemId>) -> Self {
         Self {
-            world,
-            state : Q::init_state()
+            world : Arc::clone(&world),
+            state : Q::init_state(world, system_id)
         }
     }
 

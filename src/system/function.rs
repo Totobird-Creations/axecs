@@ -3,7 +3,7 @@
 
 use crate::world::World;
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireFuture };
-use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, SystemPassable };
+use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, SystemPassable };
 use crate::util::future::multijoin;
 use crate::util::variadic::variadic;
 use core::ops::AsyncFnMut;
@@ -26,9 +26,9 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         type System = FunctionSystem<Self, (), ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
 
         #[track_caller]
-        fn into_system(self) -> Self::System {
+        fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
             <( $( $generic , )* )>::validate().panic_on_violation();
-            $( let $generic = <$generic as Query>::init_state(); )*
+            $( let $generic = <$generic as Query>::init_state(Arc::clone(&world), system_id); )*
             FunctionSystem {
                 function     : self,
                 query_states : ( $( $generic , )* ),
@@ -37,8 +37,8 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         }
 
         #[track_caller]
-        unsafe fn into_system_unchecked(self) -> Self::System {
-            $( let $generic = <$generic as Query>::init_state(); )*
+        unsafe fn into_system_unchecked(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
+            $( let $generic = <$generic as Query>::init_state(Arc::clone(&world), system_id); )*
             FunctionSystem {
                 function     : self,
                 query_states : ( $( $generic , )* ),
@@ -70,9 +70,9 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         type System = FunctionSystem<Self, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
 
         #[track_caller]
-        fn into_system(self) -> Self::System {
+        fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
             <( $( $generic , )* )>::validate().panic_on_violation();
-            $( let $generic = <$generic as Query>::init_state(); )*
+            $( let $generic = <$generic as Query>::init_state(Arc::clone(&world), system_id); )*
             FunctionSystem {
                 function     : self,
                 query_states : ( $( $generic , )* ),
@@ -81,8 +81,8 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         }
 
         #[track_caller]
-        unsafe fn into_system_unchecked(self) -> Self::System {
-            $( let $generic = <$generic as Query>::init_state(); )*
+        unsafe fn into_system_unchecked(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
+            $( let $generic = <$generic as Query>::init_state(Arc::clone(&world), system_id); )*
             FunctionSystem {
                 function     : self,
                 query_states : ( $( $generic , )* ),

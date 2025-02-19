@@ -1,8 +1,12 @@
 //! TODO: Doc comment
 
 
-use crate::system::{ System, IntoSystem };
+use crate::world::World;
+use crate::system::{ SystemId, System, IntoSystem };
 use crate::schedule::system::{ ConditionSystemConfig, IntoConditionSystemConfig, ConditionNoneMarkerSystem };
+use crate::util::lazycell::LazyCell;
+use alloc::boxed::Box;
+use alloc::sync::Arc;
 
 
 /// TODO: Doc comment
@@ -35,7 +39,7 @@ where Self : 'l
 /// TODO: Doc comment
 pub struct ScheduledSystemConfig<S : System<(), Passed = ()>, C : System<bool, Passed = ()>> {
     pub(super) run_if : Option<ConditionSystemConfig<C>>,
-    pub(super) run    : S
+    pub(super) run    : LazyCell<S, Arc<World>, Box<dyn FnOnce(Arc<World>) -> S>>
 }
 
 
@@ -46,12 +50,12 @@ unsafe impl<'l, S : System<(), Passed = ()> + 'l, C : System<bool, Passed = ()> 
 }
 
 
-unsafe impl<'l, Params : 'l, S : IntoSystem<Params, (), System = S1> + 'l, S1 : System<(), Passed = ()> + 'l> IntoScheduledSystemConfig<'l, Params> for S {
+unsafe impl<'l, Params : 'l, S : IntoSystem<Params, (), System = S1> + 'static, S1 : System<(), Passed = ()> + 'l> IntoScheduledSystemConfig<'l, Params> for S {
     #[track_caller]
     fn into_scheduled_system_config(self) -> ScheduledSystemConfig<impl System<(), Passed = ()> + 'l, impl System<bool, Passed = ()> + 'l> {
         ScheduledSystemConfig {
             run_if : Option::<ConditionSystemConfig<ConditionNoneMarkerSystem>>::None,
-            run    : <S as IntoSystem<_, _>>::into_system(self)
+            run    : LazyCell::new(Box::new(|world| <S as IntoSystem<_, _>>::into_system(self, world, Some(SystemId::unique()))))
         }
     }
 }

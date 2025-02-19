@@ -12,7 +12,8 @@
     future_join,
     map_try_insert,
     concat_idents,
-    arbitrary_self_types
+    arbitrary_self_types,
+    mpmc_channel
 )]
 #![feature(
     assert_matches,
@@ -20,7 +21,6 @@
     doc_cfg
 )]
 
-#![no_std]
 extern crate alloc;
 
 
@@ -58,6 +58,13 @@ pub mod prelude {
 
     #[doc(inline)]
     pub use crate::resource::Res;
+    #[doc(inline)]
+    pub use crate::resource::{ EventWriter, EventReader };
+
+    /// TODO: Docs
+    #[cfg(feature = "derive")]
+    #[doc(cfg(feature = "derive"))]
+    pub use axecs_macro::Event;
 
     /// Implements [`Resource`](crate::resource::Resource) on an item.
     ///

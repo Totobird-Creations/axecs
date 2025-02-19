@@ -6,6 +6,7 @@ pub use scoped::*;
 
 
 use crate::world::World;
+use crate::system::SystemId;
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryValidator };
 use crate::util::variadic::variadic_no_unit;
 use core::task::Poll;
@@ -15,7 +16,7 @@ use alloc::sync::Arc;
 unsafe impl Query for () {
     type Item = ();
 
-    fn init_state() -> Self::State { () }
+    fn init_state(_world : Arc<World>, _system_id : Option<SystemId>) -> Self::State { () }
 
     unsafe fn acquire(_world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         Poll::Ready(QueryAcquireResult::Ready(()))
@@ -33,8 +34,8 @@ unsafe impl<Q : Query> Query for Option<Q> {
     type Item = Option<<Q as Query>::Item>;
     type State = <Q as Query>::State;
 
-    fn init_state() -> Self::State {
-        <Q as Query>::init_state()
+    fn init_state(world : Arc<World>, system_id : Option<SystemId>) -> Self::State {
+        <Q as Query>::init_state(world, system_id)
     }
 
     unsafe fn acquire(world : Arc<World>, state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
@@ -64,8 +65,8 @@ macro impl_query_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) {
         type Item = ( $( <$generic as Query>::Item , )* );
         type State = ( $( <$generic as Query>::State , )* );
 
-        fn init_state() -> Self::State {
-            $( let $generic = <$generic as Query>::init_state(); )*
+        fn init_state(world : Arc<World>, system_id : Option<SystemId>) -> Self::State {
+            $( let $generic = <$generic as Query>::init_state(Arc::clone(&world), system_id); )*
             ( $( $generic , )* )
         }
 

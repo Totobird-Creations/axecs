@@ -4,6 +4,7 @@
 use crate::world::World;
 use crate::component::query::{ ComponentQuery, ReadOnlyComponentQuery, ComponentFilter, True };
 use crate::component::archetype::{ ArchetypeStorage, Archetype };
+use crate::system::SystemId;
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryValidator };
 use crate::util::rwlock::RwLockWriteGuard;
 use core::task::Poll;
@@ -76,7 +77,7 @@ impl<Q : ComponentQuery, F : ComponentFilter> Entities<Q, F> {
 unsafe impl<Q : ComponentQuery + 'static, F : ComponentFilter> Query for Entities<Q, F> {
     type Item = Entities<Q, F>;
 
-    fn init_state() -> Self::State { () }
+    fn init_state(_world : Arc<World>, _system_id : Option<SystemId>) -> Self::State { () }
 
     unsafe fn acquire(world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         // SAFETY: TODO
@@ -163,10 +164,6 @@ pub struct EntitiesEntry<Q : ComponentQuery> {
     entry : MaybeUninit<Q::ItemMut<'static>>
 
 }
-
-unsafe impl<Q : ComponentQuery> Sync for EntitiesEntry<Q>
-where Q::ItemMut<'static> : Sync
-{ }
 
 unsafe impl<Q : ComponentQuery> Send for EntitiesEntry<Q>
 where Q::ItemMut<'static> : Send

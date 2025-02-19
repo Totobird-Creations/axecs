@@ -25,7 +25,24 @@ pub use state::*;
 
 use crate::world::World;
 use core::marker::PhantomData;
+use core::sync::atomic::{ AtomicU64, Ordering as AtomicOrdering };
 use alloc::sync::Arc;
+
+
+/// TODO: Doc comment
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct SystemId(u64);
+impl SystemId {
+
+    /// TODO: Doc comment
+    pub(crate) fn unique() -> Self {
+        Self(NEXT_SYSTEM_ID.fetch_add(1, AtomicOrdering::Relaxed))
+    }
+
+}
+
+/// TODO: Doc comment
+pub(crate) static NEXT_SYSTEM_ID : AtomicU64 = AtomicU64::new(0);
 
 
 /// TODO: Doc comment
@@ -51,10 +68,10 @@ pub trait IntoSystem<Params, Return> : Sized {
     type System : System<Return>;
 
     /// TODO: Doc comment
-    fn into_system(self) -> Self::System;
+    fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System;
 
     /// TODO: Doc comment
-    unsafe fn into_system_unchecked(self) -> Self::System;
+    unsafe fn into_system_unchecked(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System;
 
     /// TODO: Doc comment
     fn pipe<B, BParams, BReturn>(self, into : B)

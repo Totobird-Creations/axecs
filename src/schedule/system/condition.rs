@@ -2,8 +2,10 @@
 
 
 use crate::world::World;
-use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
+use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
+use crate::util::lazycell::LazyCell;
 use alloc::sync::Arc;
+use alloc::boxed::Box;
 
 
 /// TODO: Doc comment
@@ -17,7 +19,7 @@ pub unsafe trait IntoConditionSystemConfig<Params> : Sized {
 
 /// TODO: Doc comment
 pub struct ConditionSystemConfig<C : System<bool, Passed = ()>> {
-    pub(super) run : C
+    pub(super) run : LazyCell<C, Arc<World>, Box<dyn FnOnce(Arc<World>) -> C>>
 }
 
 unsafe impl<C : System<bool, Passed = ()>> IntoConditionSystemConfig<()> for ConditionSystemConfig<C> {
@@ -27,12 +29,12 @@ unsafe impl<C : System<bool, Passed = ()>> IntoConditionSystemConfig<()> for Con
 }
 
 
-unsafe impl<Params, C : IntoReadOnlySystem<Params, bool, System = C1>, C1 : System<bool, Passed = ()>> IntoConditionSystemConfig<Params> for C
+unsafe impl<Params, C : IntoReadOnlySystem<Params, bool, System = C1> + 'static, C1 : System<bool, Passed = ()>> IntoConditionSystemConfig<Params> for C
 where <Self as IntoSystem<Params, bool>>::System : ReadOnlySystem<bool>
 {
     fn into_condition_system_config(self) -> ConditionSystemConfig<impl System<bool, Passed = ()>> {
         ConditionSystemConfig {
-            run : <C as IntoSystem<_, _>>::into_system(self)
+            run : LazyCell::new(Box::new(|world| <C as IntoSystem<_, _>>::into_system(self, world, Some(SystemId::unique()))))
         }
     }
 }

@@ -3,6 +3,8 @@
 
 pub mod rwlock;
 
+pub(crate) mod lazycell;
+
 pub(crate) mod either;
 
 pub(crate) mod sparsevec;

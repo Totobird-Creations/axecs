@@ -2,6 +2,7 @@
 
 
 use crate::world::World;
+use crate::system::SystemId;
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryAcquireFuture, QueryValidator };
 use core::ops::AsyncFnMut;
 use core::task::Poll;
@@ -47,16 +48,16 @@ unsafe impl<Q : Query> Query for Scoped<Q> {
 
     type Item = Scoped<Q>;
 
-    type State = ();
+    type State = Option<SystemId>;
 
-    fn init_state() -> Self::State {
-        ()
+    fn init_state(_world : Arc<World>, system_id : Option<SystemId>) -> Self::State {
+        system_id
     }
 
-    unsafe fn acquire(world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
+    unsafe fn acquire(world : Arc<World>, state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         Poll::Ready(QueryAcquireResult::Ready(Scoped {
-            world,
-            state : Q::init_state()
+            world : Arc::clone(&world),
+            state : Q::init_state(world, *state)
         }))
     }
 

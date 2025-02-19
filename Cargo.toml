@@ -33,10 +33,10 @@ version = "1.0"
 [dependencies.ctrlc]
 version = "3.4"
 
-
-[dev-dependencies.async-std]
+[dependencies.async-std]
 version  = "1.13"
 features = [ "attributes" ]
+
 
 [dev-dependencies.tokio]
 version  = "1.43"

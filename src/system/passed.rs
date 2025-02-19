@@ -2,7 +2,7 @@
 
 
 use crate::world::World;
-use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, In };
+use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, In };
 use core::marker::PhantomData;
 use alloc::sync::Arc;
 
@@ -37,18 +37,18 @@ where   S         : IntoSystem<Params, Return>,
     type System = PassedSystem<Passed, S::System, Return>;
 
     #[track_caller]
-    fn into_system(self) -> Self::System {
+    fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
         PassedSystem {
-            system : self.system.into_system(),
+            system : self.system.into_system(world, system_id),
             passed : self.passed,
             marker : PhantomData
         }
     }
 
     #[track_caller]
-    unsafe fn into_system_unchecked(self) -> Self::System {
+    unsafe fn into_system_unchecked(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
         PassedSystem {
-            system : unsafe{ self.system.into_system_unchecked() },
+            system : unsafe{ self.system.into_system_unchecked(world, system_id) },
             passed : self.passed,
             marker : PhantomData
         }

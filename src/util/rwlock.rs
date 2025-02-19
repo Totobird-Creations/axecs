@@ -18,6 +18,9 @@ pub struct RwLock<T> {
 
 }
 
+unsafe impl<T> Sync for RwLock<T> { }
+unsafe impl<T> Send for RwLock<T> { }
+
 /// Private types.
 mod __internal {
     use super::*;
@@ -38,6 +41,9 @@ mod __internal {
         pub(super) waiting_writes : AtomicU32
 
     }
+
+    unsafe impl<T> Sync for RwLockInner<T> { }
+    unsafe impl<T> Send for RwLockInner<T> { }
 
 }
 use __internal::*;
@@ -140,7 +146,7 @@ impl<T> RwLockInner<T> {
     /// # Safety
     /// The caller is responsible for ensuring the [`RwLock`] is write-locked, but has no guards to it.
     /// See [`RwLock::new_writing`].
-    pub(crate) fn write_unchecked(self : &Arc<Self>) -> RwLockWriteGuard<T> {
+    pub(crate) unsafe fn write_unchecked(self : &Arc<Self>) -> RwLockWriteGuard<T> {
         RwLockWriteGuard { lock : ManuallyDrop::new(self.clone()) }
     }
 
@@ -155,6 +161,8 @@ pub struct PendingRwLockRead<T> {
     lock : Arc<RwLockInner<T>>
 
 }
+
+unsafe impl<T> Send for PendingRwLockRead<T> { }
 
 impl<T> PendingRwLockRead<T> {
 
@@ -182,6 +190,8 @@ pub struct RwLockReadGuard<T> {
     lock : ManuallyDrop<Arc<RwLockInner<T>>>
 
 }
+
+unsafe impl<T> Send for RwLockReadGuard<T> { }
 
 impl<T> RwLockReadGuard<T> {
 
@@ -230,6 +240,8 @@ pub struct PendingRwLockWrite<T> {
 
 }
 
+unsafe impl<T> Send for PendingRwLockWrite<T> { }
+
 impl<T> PendingRwLockWrite<T> {
 
     /// TODO: Doc comments
@@ -262,6 +274,8 @@ pub struct PendingRwLockUpgrade<T> {
     lock : Arc<RwLockInner<T>>
 
 }
+
+unsafe impl<T> Send for PendingRwLockUpgrade<T> { }
 
 impl<T> PendingRwLockUpgrade<T> {
 
@@ -297,6 +311,8 @@ pub struct RwLockWriteGuard<T> {
     lock : ManuallyDrop<Arc<RwLockInner<T>>>
 
 }
+
+unsafe impl<T> Send for RwLockWriteGuard<T> { }
 
 impl<T> RwLockWriteGuard<T> {
 
@@ -341,6 +357,8 @@ pub struct PendingRwLockOwn<T> {
     lock : Option<Arc<RwLockInner<T>>>
 
 }
+
+unsafe impl<T> Send for PendingRwLockOwn<T> { }
 
 impl<T> Unpin for PendingRwLockOwn<T> { }
 

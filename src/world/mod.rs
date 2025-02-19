@@ -10,7 +10,7 @@ use crate::entity::Entity;
 use crate::component::bundle::ComponentBundle;
 use crate::component::archetype::ArchetypeStorage;
 use crate::query::{ Query, ReadOnlyQuery, PersistentQueryState };
-use crate::system::{ IntoSystem, IntoReadOnlySystem, ReadOnlySystem, PersistentSystemState };
+use crate::system::{ SystemId, IntoSystem, IntoReadOnlySystem, ReadOnlySystem, PersistentSystemState };
 use crate::app::AppExit;
 use crate::schedule::system::TypeErasedSystem;
 use crate::util::rwlock::RwLock;
@@ -180,6 +180,11 @@ impl World {
         self.resources.get_mut::<R>().await
     }
 
+    /// Returns a mutable reference to a [`Resource`], creating it if needed.
+    pub async fn get_resource_mut_or_insert<R : Resource + 'static>(&self, f : impl FnOnce() -> R) -> ResourceCellWriteGuard<'_, R> {
+        self.resources.get_mut_or_insert::<R>(f).await
+    }
+
 
     /// Spawns an entity with some [`Component`](crate::component::Component)s.
     ///
@@ -246,7 +251,7 @@ impl World {
     /// TODO: Doc comments
     pub unsafe fn query_unchecked<Q : ReadOnlyQuery>(self : &Arc<Self>) -> PersistentQueryState<Q> {
         // SAFETY: TODO
-        unsafe{ PersistentQueryState::<Q>::new(Arc::clone(self)) }
+        unsafe{ PersistentQueryState::<Q>::new(Arc::clone(self), Some(SystemId::unique())) }
     }
 
     /// TODO: Doc comments
@@ -260,7 +265,7 @@ impl World {
     /// TODO: Doc comments
     pub unsafe fn query_unchecked_mut<Q : Query>(self : &Arc<Self>) -> PersistentQueryState<Q> {
         // SAFETY: TODO
-        unsafe{ PersistentQueryState::<Q>::new(Arc::clone(self)) }
+        unsafe{ PersistentQueryState::<Q>::new(Arc::clone(self), Some(SystemId::unique())) }
     }
 
 
@@ -269,25 +274,25 @@ impl World {
     pub fn system<S : IntoReadOnlySystem<Params, Return>, Params, Return>(self : &Arc<Self>, system : S) -> PersistentSystemState<S::System, Return>
     where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return>
     {
-        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system()) }
+        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system(Arc::clone(self), Some(SystemId::unique()))) }
     }
 
     /// TODO: Doc comments
     pub fn system_unchecked<S : IntoReadOnlySystem<Params, Return>, Params, Return>(self : &Arc<Self>, system : S) -> PersistentSystemState<S::System, Return>
     where <S as IntoSystem<Params, Return>>::System : ReadOnlySystem<Return>
     {
-        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system_unchecked()) }
+        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system_unchecked(Arc::clone(self), Some(SystemId::unique()))) }
     }
 
     /// TODO: Doc comments
     #[track_caller]
     pub fn system_mut<S : IntoSystem<Params, Return>, Params, Return>(self : &Arc<Self>, system : S) -> PersistentSystemState<S::System, Return> {
-        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system()) }
+        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system(Arc::clone(self), Some(SystemId::unique()))) }
     }
 
     /// TODO: Doc comments
     pub fn system_unchecked_mut<S : IntoSystem<Params, Return>, Params, Return>(self : &Arc<Self>, system : S) -> PersistentSystemState<S::System, Return> {
-        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system_unchecked()) }
+        unsafe{ PersistentSystemState::new(Arc::clone(self), system.into_system_unchecked(Arc::clone(self), Some(SystemId::unique()))) }
     }
 
     /// TODO: Doc comments

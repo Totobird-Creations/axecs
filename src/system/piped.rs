@@ -2,7 +2,7 @@
 
 
 use crate::world::World;
-use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, SystemPassable };
+use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, SystemPassable };
 use core::marker::PhantomData;
 use core::ops::{ Deref, DerefMut };
 use alloc::sync::Arc;
@@ -40,22 +40,22 @@ where   A         : IntoSystem<AParams, BPassed>,
     type System = PipedSystem<APassed, A::System, BPassed, B::System, Return>;
 
     #[track_caller]
-    fn into_system(self) -> Self::System {
+    fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
         PipedSystem {
-            a : self.a.into_system(),
-            b : self.b.into_system(),
+            a : self.a.into_system(Arc::clone(&world), system_id),
+            b : self.b.into_system(world, system_id),
             marker_a : PhantomData,
             marker_b : PhantomData
         }
     }
 
     #[track_caller]
-    unsafe fn into_system_unchecked(self) -> Self::System {
+    unsafe fn into_system_unchecked(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
         PipedSystem {
             // SAFETY: TODO
-            a : unsafe{ self.a.into_system_unchecked() },
+            a : unsafe{ self.a.into_system_unchecked(Arc::clone(&world), system_id) },
             // SAFETY: TODO
-            b : unsafe{ self.b.into_system_unchecked() },
+            b : unsafe{ self.b.into_system_unchecked(world, system_id) },
             marker_a : PhantomData,
             marker_b : PhantomData
         }

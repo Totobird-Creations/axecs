@@ -39,12 +39,12 @@ unsafe impl<S : System<(), Passed = ()>, C : System<bool, Passed = ()>> TypeEras
         Box::pin(async {
             if let Some(run_if) = &mut self.run_if {
                 // SAFETY: TODO
-                if (! unsafe{ run_if.run.acquire_and_run((), Arc::clone(&world)) }.await) {
+                if (! unsafe{ run_if.run.get_mut(Arc::clone(&world)).acquire_and_run((), Arc::clone(&world)) }.await) {
                     return;
                 }
             }
             // SAFETY: TODO
-            unsafe{ self.run.acquire_and_run((), world) }.await
+            unsafe{ self.run.get_mut(Arc::clone(&world)).acquire_and_run((), world) }.await
         })
     }
 }
@@ -52,6 +52,6 @@ unsafe impl<S : System<(), Passed = ()>, C : System<bool, Passed = ()>> TypeEras
 unsafe impl<C : System<bool, Passed = ()>> TypeErasedSystem<(), bool> for ConditionSystemConfig<C> {
     unsafe fn acquire_and_run<'l>(&'l mut self, _passed : (), world : Arc<World>) -> Pin<Box<dyn Future<Output = bool> + 'l>> {
         // SAFETY: TODO
-        Box::pin(unsafe{ self.run.acquire_and_run((), world) })
+        Box::pin(unsafe{ self.run.get_mut(Arc::clone(&world)).acquire_and_run((), world) })
     }
 }

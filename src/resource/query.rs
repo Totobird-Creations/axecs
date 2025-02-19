@@ -3,6 +3,7 @@
 
 use crate::world::World;
 use crate::resource::{ self, Resource, ResourceCell };
+use crate::system::SystemId;
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryValidator };
 use crate::util::rwlock::{ RwLockReadGuard, RwLockWriteGuard };
 use core::ops::{ Deref, DerefMut };
@@ -39,7 +40,7 @@ unsafe impl<'l, R : Resource + 'static> Query for Res<&'l R> {
     type Item = Res<&'l R>;
     type State = ();
 
-    fn init_state() -> Self::State { }
+    fn init_state(_world : Arc<World>, _system_id : Option<SystemId>) -> Self::State { }
 
     unsafe fn acquire(world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         match (world.resources().try_read_raw()) {
@@ -91,7 +92,7 @@ unsafe impl<'l, R : Resource + 'static> Query for Res<&'l mut R> {
     type Item = Res<&'l mut R>;
     type State = ();
 
-    fn init_state() -> Self::State { }
+    fn init_state(_world : Arc<World>, _system_id : Option<SystemId>) -> Self::State { }
 
     unsafe fn acquire(world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
         match (world.resources().try_read_raw()) {

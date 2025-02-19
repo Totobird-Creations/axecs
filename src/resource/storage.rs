@@ -112,6 +112,17 @@ impl ResourceStorage {
         })
     }
 
+    /// TODO: Doc comment
+    pub(crate) fn try_get_ref<R : Resource + 'static>(&self) -> Poll<Option<ResourceCellReadGuard<'_, R>>> {
+        let Poll::Ready(raw) = self.raw.try_read() else { return Poll::Pending; };
+        let Some(lock) = raw.resources.get(&TypeId::of::<R>()) else { return Poll::Ready(None); };
+        let Poll::Ready(guard) = lock.try_read() else { return Poll::Pending; };
+        Poll::Ready(Some(ResourceCellReadGuard {
+            guard,
+            marker : PhantomData
+        }))
+    }
+
     /// Acquires a write lock to a [`ResourceCell`] by [`Resource`] type, if it exists.
     pub async fn get_mut<R : Resource + 'static>(&self) -> Option<ResourceCellWriteGuard<'_, R>> {
         let raw = self.raw.read().await;
@@ -120,6 +131,26 @@ impl ResourceStorage {
             guard  : lock.write().await,
             marker : PhantomData
         })
+    }
+
+    /// Acquires a write lock to a [`ResourceCell`] by [`Resource`] type, creating it if needed.
+    pub async fn get_mut_or_insert<R : Resource + 'static>(&self, f : impl FnOnce() -> R) -> ResourceCellWriteGuard<'_, R> {
+        let mut raw = self.raw.write().await;
+        let type_id = TypeId::of::<R>();
+        if let Some(lock) = raw.resources.get(&type_id) {
+            ResourceCellWriteGuard {
+                guard  : lock.write().await,
+                marker : PhantomData
+            }
+        } else {
+            let lock = unsafe{ RwLock::new_writing(ResourceCell::new(f())) };
+            let guard = ResourceCellWriteGuard {
+                guard  : unsafe{ lock.write_unchecked() },
+                marker : PhantomData
+            };
+            raw.resources.insert(type_id, lock);
+            guard
+        }
     }
 
 }

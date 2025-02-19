@@ -2,7 +2,7 @@
 
 
 use crate::world::World;
-use crate::system::{ System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
+use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
 use crate::util::variadic::variadic_no_unit;
 use core::marker::PhantomData;
 use core::future::join;
@@ -42,20 +42,20 @@ where   A         : IntoSystem<AParams, ()>,
     type System = ParallelSystem<A::System, B::System>;
 
     #[track_caller]
-    fn into_system(self) -> Self::System {
+    fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
         ParallelSystem {
-            a : self.a.into_system(),
-            b : self.b.into_system()
+            a : self.a.into_system(Arc::clone(&world), system_id),
+            b : self.b.into_system(world, system_id)
         }
     }
 
     #[track_caller]
-    unsafe fn into_system_unchecked(self) -> Self::System {
+    unsafe fn into_system_unchecked(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
         ParallelSystem {
             // SAFETY: TODO
-            a : unsafe{ self.a.into_system_unchecked() },
+            a : unsafe{ self.a.into_system_unchecked(Arc::clone(&world), system_id) },
             // SAFETY: TODO
-            b : unsafe{ self.b.into_system_unchecked() }
+            b : unsafe{ self.b.into_system_unchecked(world, system_id) }
         }
     }
 }
@@ -126,17 +126,19 @@ macro impl_into_system_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* $(,)
         type System = impl System<(), Passed = ()>;
 
         #[track_caller]
-        fn into_system(self) -> Self::System {
+        fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
             IntoSystem::into_system(
-                impl_into_system_for_tuple_inner!( $( self.${index()} ${ignore($generic)} , )* )
+                impl_into_system_for_tuple_inner!( $( self.${index()} ${ignore($generic)} , )* ),
+                world, system_id
             )
         }
 
         #[track_caller]
-        unsafe fn into_system_unchecked(self) -> Self::System {
+        unsafe fn into_system_unchecked(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
             // SAFETY: TODO
             unsafe{ IntoSystem::into_system_unchecked(
-                impl_into_system_for_tuple_inner!( $( self.${index()} ${ignore($generic)} , )* )
+                impl_into_system_for_tuple_inner!( $( self.${index()} ${ignore($generic)} , )* ),
+                world, system_id
             ) }
         }
     }

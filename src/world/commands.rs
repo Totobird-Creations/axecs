@@ -4,9 +4,10 @@
 use crate::app::AppExit;
 use crate::world::World;
 use crate::resource::Resource;
+use crate::entity::Entity;
 use crate::component::bundle::ComponentBundle;
 use crate::query::{ Query, QueryAcquireResult, QueryValidator };
-use crate::system::{ IntoSystem, IntoReadOnlySystem, System, ReadOnlySystem };
+use crate::system::{ SystemId, IntoSystem, IntoReadOnlySystem, System, ReadOnlySystem };
 use core::task::Poll;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
@@ -20,6 +21,10 @@ pub struct Commands {
     world : Arc<World>
 
 }
+
+unsafe impl Send for Commands { }
+
+unsafe impl Sync for Commands { }
 
 
 impl Commands {
@@ -78,11 +83,18 @@ impl Commands {
     }
 
     /// TODO: Doc comments
+    pub async fn despawn(&self, entity : Entity) {
+        self.world.cmd_queue.write().await.push(Box::new(move |world|
+            Box::pin(async move { world.despawn(entity).await; })
+        ))
+    }
+
+    /// TODO: Doc comments
     pub async fn run_system<S : IntoReadOnlySystem<Params, ()> + 'static, Params>(&self, system : S)
     where <S as IntoSystem<Params, ()>>::System : System<(), Passed = ()> + ReadOnlySystem<()>
     {
         self.world.cmd_queue.write().await.push(Box::new(|world| Box::pin(async {
-            let mut system = system.into_system();
+            let mut system = system.into_system(Arc::clone(&world), None);
             // SAFETY: TODO
             unsafe{ system.acquire_and_run((), world) }.await;
         })));
@@ -93,7 +105,7 @@ impl Commands {
     where <S as IntoSystem<Params, ()>>::System : System<(), Passed = ()>
     {
         self.world.cmd_queue.write().await.push(Box::new(|world| Box::pin(async {
-            let mut system = system.into_system();
+            let mut system = system.into_system(Arc::clone(&world), None);
             // SAFETY: TODO
             unsafe{ system.acquire_and_run((), world) }.await;
         })));
@@ -108,7 +120,7 @@ unsafe impl Query for Commands {
 
     type State = ();
 
-    fn init_state() -> Self::State {
+    fn init_state(_world : Arc<World>, _system_id : Option<SystemId>) -> Self::State {
         ()
     }
 
