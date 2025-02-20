@@ -39,18 +39,16 @@ unsafe impl<E : Event> Send for EventWriter<E> { }
 
 unsafe impl<E : Event + 'static> Query for EventWriter<E> {
     type Item  = EventWriter<E>;
-    type State = ();
+    type State = Arc<RwLock<Vec<mpmc::Sender<E>>>>;
 
     fn init_state(world : Arc<World>, _system_id : Option<SystemId>) -> Self::State {
-        block_on(world.get_resource_mut_or_insert(|| {
-            EventQueue::<E> { events : Arc::new(RwLock::new(Vec::new())) }
-        }));
+        Arc::clone(&block_on(world.get_resource_mut_or_insert::<EventQueue<E>>(|| {
+            EventQueue { events : Arc::new(RwLock::new(Vec::new())) }
+        })).events)
     }
 
-    unsafe fn acquire(world : Arc<World>, _state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
-        if let Poll::Ready(resource) = world.resources().try_get_ref::<EventQueue<E>>() {
-            return Poll::Ready(QueryAcquireResult::Ready(Self { events : Arc::clone(&resource.unwrap().events) }));
-        } else { return Poll::Pending; }
+    unsafe fn acquire(_world : Arc<World>, state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
+        Poll::Ready(QueryAcquireResult::Ready(EventWriter { events : Arc::clone(state) }))
     }
 
     fn validate() -> QueryValidator {
@@ -94,8 +92,8 @@ unsafe impl<E : Event + 'static> Query for EventReader<E> {
 
     fn init_state(world : Arc<World>, _system_id : Option<SystemId>) -> Self::State {
         block_on(async {
-            let resource = world.get_resource_mut_or_insert(||
-                EventQueue::<E> { events : Arc::new(RwLock::new(Vec::new())) }
+            let resource = world.get_resource_mut_or_insert::<EventQueue<E>>(||
+                EventQueue { events : Arc::new(RwLock::new(Vec::new())) }
             ).await;
             let (tx, rx) = mpmc::channel();
             resource.events.write().await.push(tx);
