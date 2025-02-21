@@ -3,7 +3,7 @@
 
 use crate::world::World;
 use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
-use crate::util::variadic::variadic_no_unit;
+//use crate::util::variadic::variadic_no_unit;
 use core::marker::PhantomData;
 use core::future::join;
 use alloc::sync::Arc;
@@ -111,7 +111,8 @@ where   A : ReadOnlySystem<(), Passed = ()>,
 { }
 
 
-variadic_no_unit!{ #[doc(fake_variadic)] impl_into_system_for_tuple }
+// TODO: Somehow bring back tuples for parallel systems. Damn you Rust 1.85.0.
+/*variadic_no_unit!{ #[doc(fake_variadic)] impl_into_system_for_tuple }
 /// TODO: Doc comments
 macro impl_into_system_for_tuple( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) { paste!{
 
@@ -164,4 +165,4 @@ macro impl_into_system_for_tuple_inner {
         )
     }
 
-}
+}*/
