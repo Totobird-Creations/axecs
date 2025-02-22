@@ -4,6 +4,11 @@
 mod scoped;
 pub use scoped::*;
 
+#[cfg(not(feature = "no_std"))]
+mod event;
+#[cfg(not(feature = "no_std"))]
+pub use event::*;
+
 
 use crate::world::World;
 use crate::system::SystemId;

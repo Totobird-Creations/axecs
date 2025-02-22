@@ -7,9 +7,6 @@ pub use storage::*;
 mod query;
 pub use query::*;
 
-mod event;
-pub use event::*;
-
 
 /// TODO: Doc comments
 pub trait Resource : Sized { }

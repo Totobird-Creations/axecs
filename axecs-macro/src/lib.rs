@@ -141,7 +141,7 @@ pub fn derive_event(input : TokenStream1) -> TokenStream1 {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     quote!{
-        impl #impl_generics axecs::resource::Event for #ident #ty_generics #where_clause { }
+        impl #impl_generics axecs::query::Event for #ident #ty_generics #where_clause { }
     }.into()
 }
 

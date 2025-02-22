@@ -17,6 +17,7 @@ edition = "2024"
 default          = [ "derive" ]
 keep_debug_names = [ ]
 derive           = [ "axecs-macro" ]
+no_std           = [ ]
 
 
 [workspace]

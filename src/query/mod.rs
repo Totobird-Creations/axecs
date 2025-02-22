@@ -2,7 +2,7 @@
 
 
 mod impls;
-pub use impls::Scoped;
+pub use impls::{ Scoped, Event, EventReader, EventWriter };
 
 mod validate;
 pub use validate::*;

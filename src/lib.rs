@@ -21,6 +21,8 @@
     doc_cfg
 )]
 
+#![cfg_attr(feature = "no_std", no_std)]
+
 extern crate alloc;
 
 
@@ -58,8 +60,6 @@ pub mod prelude {
 
     #[doc(inline)]
     pub use crate::resource::Res;
-    #[doc(inline)]
-    pub use crate::resource::{ EventWriter, EventReader };
 
     /// TODO: Docs
     #[cfg(feature = "derive")]
@@ -141,6 +141,9 @@ pub mod prelude {
 
     #[doc(inline)]
     pub use crate::query::Scoped;
+    #[doc(inline)]
+    #[cfg(not(feature = "no_std"))]
+    pub use crate::query::{ EventReader, EventWriter };
 
     #[doc(inline)]
     pub use crate::system::{ IntoSystem, IntoSystemPassable, In };
