@@ -7,7 +7,7 @@ use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlyS
 use core::marker::PhantomData;
 use core::future::join;
 use alloc::sync::Arc;
-use paste::paste;
+//use paste::paste;
 
 
 pub struct IntoParallelSystem<A, AParams, B, BParams>

@@ -28,8 +28,8 @@ members = [ "axecs-macro" ]
 path     = "axecs-macro"
 optional = true
 
-[dependencies.paste]
-version = "1.0"
+#[dependencies.paste]
+#version = "1.0"
 
 [dependencies.ctrlc]
 version = "3.4"

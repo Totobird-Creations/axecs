@@ -112,17 +112,6 @@ impl ResourceStorage {
         })
     }
 
-    /// TODO: Doc comment
-    pub(crate) fn try_get_ref<R : Resource + 'static>(&self) -> Poll<Option<ResourceCellReadGuard<'_, R>>> {
-        let Poll::Ready(raw) = self.raw.try_read() else { return Poll::Pending; };
-        let Some(lock) = raw.resources.get(&TypeId::of::<R>()) else { return Poll::Ready(None); };
-        let Poll::Ready(guard) = lock.try_read() else { return Poll::Pending; };
-        Poll::Ready(Some(ResourceCellReadGuard {
-            guard,
-            marker : PhantomData
-        }))
-    }
-
     /// Acquires a write lock to a [`ResourceCell`] by [`Resource`] type, if it exists.
     pub async fn get_mut<R : Resource + 'static>(&self) -> Option<ResourceCellWriteGuard<'_, R>> {
         let raw = self.raw.read().await;
