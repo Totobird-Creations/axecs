@@ -23,11 +23,17 @@ pub struct Scoped<Q : Query> {
 
 impl<Q : Query> Scoped<Q> {
 
+    #[track_caller]
     pub async fn with<F : AsyncFnMut(Q::Item) -> U, U>(&mut self, f : F) -> U {
-        self.try_with(f).await.unwrap()
+        self.maybe_lock(f).await.unwrap("Scoped")
     }
 
-    pub async fn try_with<F : AsyncFnMut(Q::Item) -> U, U>(&mut self, mut f : F) -> QueryAcquireResult<U> {
+    #[track_caller]
+    pub async fn lock(&mut self) -> Q::Item {
+        self.maybe_lock(async |q| q).await.unwrap("Scoped")
+    }
+
+    pub async fn maybe_lock<F : AsyncFnMut(Q::Item) -> U, U>(&mut self, mut f : F) -> QueryAcquireResult<U> {
         // SAFETY: TODO
         match (unsafe{ QueryAcquireFuture::<Q>::new(Arc::clone(&self.world), &mut self.state) }.await) {
 

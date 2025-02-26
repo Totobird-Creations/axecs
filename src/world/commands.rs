@@ -35,6 +35,7 @@ impl Commands {
     /// If this is used to run an operation on the [`World`] which requests some values,
     ///  but the calling system has already locked it, the operation will deadlock.
     /// Use with caution.
+    #[doc(hidden)]
     pub fn world(&self) -> &World {
         self.world.as_ref()
     }*/

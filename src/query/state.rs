@@ -38,7 +38,7 @@ impl<Q : Query> PersistentQueryState<Q> {
     pub fn try_acquire(&mut self) -> Poll<Q::Item> {
         // SAFETY: TODO
         match (unsafe{ Q::acquire(Arc::clone(&self.world), &mut self.state) }) {
-            Poll::Ready(out) => Poll::Ready(out.unwrap()),
+            Poll::Ready(out) => Poll::Ready(out.unwrap("Query")),
             Poll::Pending    => Poll::Pending
         }
     }
@@ -50,7 +50,7 @@ impl<Q : Query> PersistentQueryState<Q> {
         unsafe{ QueryAcquireFuture::<Q>::new(
             Arc::clone(&self.world),
             &mut self.state
-        ) }.await.unwrap()
+        ) }.await.unwrap("Query")
     }
 
 }

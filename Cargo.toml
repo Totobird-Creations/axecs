@@ -38,6 +38,9 @@ version = "3.4"
 version  = "1.13"
 features = [ "attributes" ]
 
+[dependencies.pin-project]
+version = "1.1"
+
 
 [dev-dependencies.tokio]
 version  = "1.43"

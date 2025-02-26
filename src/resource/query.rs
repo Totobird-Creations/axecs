@@ -7,7 +7,7 @@ use crate::system::SystemId;
 use crate::query::{ Query, ReadOnlyQuery, QueryAcquireResult, QueryValidator };
 use crate::util::rwlock::{ RwLockReadGuard, RwLockWriteGuard };
 use core::ops::{ Deref, DerefMut };
-use core::any::TypeId;
+use core::any::{ TypeId, type_name };
 use core::task::Poll;
 use alloc::sync::Arc;
 
@@ -53,7 +53,10 @@ unsafe impl<'l, R : Resource + 'static> Query for Res<&'l R> {
                     })
                 ) {
                     Some(out) => Poll::Ready(QueryAcquireResult::Ready(Res { guard : out })),
-                    None      => Poll::Pending
+                    None      => Poll::Ready(QueryAcquireResult::DoesNotExist {
+                        #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
+                        name : type_name::<resource::marker::Resource<R>>()
+                    })
                 }
             },
             Poll::Pending => Poll::Pending
@@ -105,7 +108,10 @@ unsafe impl<'l, R : Resource + 'static> Query for Res<&'l mut R> {
                     })
                 ) {
                     Some(out) => Poll::Ready(QueryAcquireResult::Ready(Res { guard : out })),
-                    None      => Poll::Pending
+                    None      => Poll::Ready(QueryAcquireResult::DoesNotExist {
+                        #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
+                        name : type_name::<resource::marker::Resource<R>>()
+                    })
                 }
             },
             Poll::Pending => Poll::Pending

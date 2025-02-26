@@ -83,15 +83,15 @@ impl<T> QueryAcquireResult<T> {
 
     /// Returns the value in [`QueryAcquireResult::Ready`], or panics if the value could not be acquired for some reason.
     #[track_caller]
-    pub fn unwrap(self) -> T {
+    pub fn unwrap(self, source : &str) -> T {
         match (self) {
 
             QueryAcquireResult::Ready(out) => out,
 
             #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
-            QueryAcquireResult::DoesNotExist { name } => { panic!("Query requested non-existant {}", unsafe{ UnqualifiedTypeName::from_unchecked(name) }) }
+            QueryAcquireResult::DoesNotExist { name } => { panic!("{} requested non-existant {}", source, unsafe{ UnqualifiedTypeName::from_unchecked(name) }) }
             #[cfg(not(any(debug_assertions, feature = "keep_debug_names")))]
-            QueryAcquireResult::DoesNotExist { } => { panic!("Query requested non-existant item") }
+            QueryAcquireResult::DoesNotExist { } => { panic!("{} requested non-existant item", source) }
 
         }
     }

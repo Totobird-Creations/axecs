@@ -6,6 +6,7 @@ use crate::query::{ Query, ReadOnlyQuery, QueryAcquireFuture };
 use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, SystemPassable };
 use crate::util::future::multijoin;
 use crate::util::variadic::variadic;
+use core::any::type_name;
 use core::ops::AsyncFnMut;
 use core::marker::PhantomData;
 use alloc::sync::Arc;
@@ -30,6 +31,7 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
             <( $( $generic , )* )>::validate().panic_on_violation();
             $( let $generic = <$generic as Query>::init_state(Arc::clone(&world), system_id); )*
             FunctionSystem {
+                source       : type_name::<F>(),
                 function     : self,
                 query_states : ( $( $generic , )* ),
                 marker       : PhantomData
@@ -40,6 +42,7 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         unsafe fn into_system_unchecked(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
             $( let $generic = <$generic as Query>::init_state(Arc::clone(&world), system_id); )*
             FunctionSystem {
+                source       : type_name::<F>(),
                 function     : self,
                 query_states : ( $( $generic , )* ),
                 marker       : PhantomData
@@ -74,6 +77,7 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
             <( $( $generic , )* )>::validate().panic_on_violation();
             $( let $generic = <$generic as Query>::init_state(Arc::clone(&world), system_id); )*
             FunctionSystem {
+                source       : type_name::<F>(),
                 function     : self,
                 query_states : ( $( $generic , )* ),
                 marker       : PhantomData
@@ -84,6 +88,7 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         unsafe fn into_system_unchecked(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
             $( let $generic = <$generic as Query>::init_state(Arc::clone(&world), system_id); )*
             FunctionSystem {
+                source       : type_name::<F>(),
                 function     : self,
                 query_states : ( $( $generic , )* ),
                 marker       : PhantomData
@@ -106,6 +111,8 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
 
 /// TODO: Doc comment
 pub struct FunctionSystem<F, Passed, Q, Params, Return> {
+
+    source       : &'static str,
 
     /// TODO: Doc comment
     function     : F,
@@ -144,7 +151,7 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
             // SAFETY: TODO
             $( let $generic = unsafe{ QueryAcquireFuture::<$generic>::new(Arc::clone(&world), &mut self.query_states.${index()}) }; )*
             let ( $( $generic , )* ) = multijoin!( $( $generic , )* );
-            run_inner::< $( $generic::Item , )* Return >( &mut self.function $( , $generic.unwrap() )* ).await
+            run_inner::< $( $generic::Item , )* Return >( &mut self.function $( , $generic.unwrap(self.source) )* ).await
         }
     }
 
@@ -183,7 +190,7 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
             // SAFETY: TODO
             $( let $generic = unsafe{ QueryAcquireFuture::<$generic>::new(Arc::clone(&world), &mut self.query_states.${index()}) }; )*
             let ( $( $generic , )* ) = multijoin!( $( $generic , )* );
-            run_inner::< Passed, $( $generic::Item , )* Return >( &mut self.function, passed $( , $generic.unwrap() )* ).await
+            run_inner::< Passed, $( $generic::Item , )* Return >( &mut self.function, passed $( , $generic.unwrap(self.source) )* ).await
         }
     }
 
