@@ -14,6 +14,7 @@ use crate::system::{ SystemId, IntoSystem, IntoReadOnlySystem, ReadOnlySystem, P
 use crate::app::AppExit;
 use crate::schedule::system::TypeErasedSystem;
 use crate::util::rwlock::RwLock;
+use core::any::TypeId;
 use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 use core::sync::atomic::{ AtomicU8, Ordering };
@@ -21,6 +22,7 @@ use core::pin::Pin;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use alloc::sync::Arc;
+use alloc::collections::BTreeSet;
 
 
 /// A wrapper for an application's exiting state, resources, entities, etc.
@@ -45,7 +47,10 @@ pub struct World {
     archetypes  : ArchetypeStorage,
 
     /// TODO: Doc comments
-    pub(crate) cmd_queue : RwLock<Vec<Box<dyn FnOnce(Arc<World>) -> Pin<Box<dyn Future<Output = ()>>>>>>
+    pub(crate) cmd_queue : RwLock<Vec<Box<dyn FnOnce(Arc<World>) -> Pin<Box<dyn Future<Output = ()>>>>>>,
+
+    /// TODO: Doc comments
+    pub(crate) ran_systems : RwLock<BTreeSet<TypeId>>
 
 }
 
@@ -69,13 +74,9 @@ impl World {
 
     /// Creates a new [`World`] with nothing in it.
     #[inline]
-    pub fn new() -> Self { Self {
-        is_exiting  : AtomicU8::new(0),
-        exit_status : UnsafeCell::new(MaybeUninit::uninit()),
-        resources   : ResourceStorage::new(),
-        archetypes  : ArchetypeStorage::new(),
-        cmd_queue   : RwLock::new(Vec::new())
-    } }
+    pub fn new() -> Self {
+        Self::new_with(ResourceStorage::new())
+    }
 
     /// creates a new [`World`] with some [`Resource`]s in it to start.
     #[inline]
@@ -84,7 +85,8 @@ impl World {
         exit_status : UnsafeCell::new(MaybeUninit::uninit()),
         resources,
         archetypes  : ArchetypeStorage::new(),
-        cmd_queue   : RwLock::new(Vec::new())
+        cmd_queue   : RwLock::new(Vec::new()),
+        ran_systems : RwLock::new(BTreeSet::new())
     } }
 
 

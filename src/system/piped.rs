@@ -3,9 +3,11 @@
 
 use crate::world::World;
 use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, SystemPassable };
+use core::any::TypeId;
 use core::marker::PhantomData;
 use core::ops::{ Deref, DerefMut };
 use alloc::sync::Arc;
+use alloc::collections::BTreeSet;
 
 
 pub struct IntoPipedSystem<APassed, A, AParams, BPassed, B, BParams, Return>
@@ -38,6 +40,11 @@ where   A         : IntoSystem<AParams, BPassed>,
         B::System : System<Return, Passed = In<BPassed>>
 {
     type System = PipedSystem<APassed, A::System, BPassed, B::System, Return>;
+
+    fn extend_scheduled_system_config_ids(ids : &mut BTreeSet<TypeId>) {
+        A::extend_scheduled_system_config_ids(ids);
+        B::extend_scheduled_system_config_ids(ids);
+    }
 
     #[track_caller]
     fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {

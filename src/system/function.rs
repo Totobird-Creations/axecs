@@ -6,10 +6,11 @@ use crate::query::{ Query, ReadOnlyQuery, QueryAcquireFuture };
 use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, SystemPassable };
 use crate::util::future::multijoin;
 use crate::util::variadic::variadic;
-use core::any::type_name;
+use core::any::{ TypeId, type_name };
 use core::ops::AsyncFnMut;
 use core::marker::PhantomData;
 use alloc::sync::Arc;
+use alloc::collections::BTreeSet;
 
 
 variadic!{ impl_into_system_for_f }
@@ -17,14 +18,19 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
 
     #[allow(non_snake_case, unused_variables)]
     $( #[ $meta ] )*
-    impl< F, $( $generic : Query , )* Return >
+    impl< F : 'static, $( $generic : Query , )* Return >
         IntoSystem<( (), $( $generic , )* ), Return>
         for F
     where for<'l> &'l mut F:
         (AsyncFnMut( $( $generic , )* ) -> Return) +
         (AsyncFnMut( $( <$generic as Query>::Item , )* ) -> Return)
     {
+
         type System = FunctionSystem<Self, (), ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
+
+        fn extend_scheduled_system_config_ids(ids : &mut BTreeSet<TypeId>) {
+            ids.insert(TypeId::of::<F>());
+        }
 
         #[track_caller]
         fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
@@ -52,7 +58,7 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
     }
 
     $( #[ $meta ] )*
-    unsafe impl< F, $( $generic : ReadOnlyQuery , )* Return >
+    unsafe impl< F : 'static, $( $generic : ReadOnlyQuery , )* Return >
         IntoReadOnlySystem<( (), $( $generic , )* ), Return>
         for F
     where for<'l> &'l mut F:
@@ -63,7 +69,7 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
 
     #[allow(non_snake_case, unused_variables)]
     $( #[ $meta ] )*
-    impl< F, Passed : SystemPassable, $( $generic : Query , )* Return >
+    impl< F : 'static, Passed : SystemPassable, $( $generic : Query , )* Return >
         IntoSystem<( Passed, $( $generic , )* ), Return>
         for F
     where for<'l> &'l mut F:
@@ -71,6 +77,10 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         (AsyncFnMut( Passed, $( <$generic as Query>::Item , )* ) -> Return)
     {
         type System = FunctionSystem<Self, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
+
+        fn extend_scheduled_system_config_ids(ids : &mut BTreeSet<TypeId>) {
+            ids.insert(TypeId::of::<F>());
+        }
 
         #[track_caller]
         fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
@@ -98,7 +108,7 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
     }
 
     $( #[ $meta ] )*
-    unsafe impl< F, Passed : SystemPassable, $( $generic : ReadOnlyQuery , )* Return >
+    unsafe impl< F : 'static, Passed : SystemPassable, $( $generic : ReadOnlyQuery , )* Return >
         IntoReadOnlySystem<( Passed, $( $generic , )* ), Return>
         for F
     where for<'l> &'l mut F:
@@ -131,7 +141,7 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
 
     #[allow(non_snake_case, unused_variables)]
     $( #[ $meta ] )*
-    impl< F, $( $generic : Query , )* Return >
+    impl< F : 'static, $( $generic : Query , )* Return >
         System<Return>
         for FunctionSystem<F, (), ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>
     where for<'l> &'l mut F:
@@ -151,12 +161,14 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
             // SAFETY: TODO
             $( let $generic = unsafe{ QueryAcquireFuture::<$generic>::new(Arc::clone(&world), &mut self.query_states.${index()}) }; )*
             let ( $( $generic , )* ) = multijoin!( $( $generic , )* );
-            run_inner::< $( $generic::Item , )* Return >( &mut self.function $( , $generic.unwrap(self.source) )* ).await
+            let out = run_inner::< $( $generic::Item , )* Return >( &mut self.function $( , $generic.unwrap(self.source) )* ).await;
+            world.ran_systems.write().await.insert(TypeId::of::<F>());
+            out
         }
     }
 
     $( #[ $meta ] )*
-    unsafe impl< F, $( $generic : ReadOnlyQuery , )* Return >
+    unsafe impl< F : 'static, $( $generic : ReadOnlyQuery , )* Return >
         ReadOnlySystem<Return>
         for FunctionSystem<F, (), ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>
     where for<'l> &'l mut F:
@@ -167,7 +179,7 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
 
     #[allow(non_snake_case, unused_variables)]
     $( #[ $meta ] )*
-    impl< F, Passed : SystemPassable, $( $generic : Query , )* Return >
+    impl< F : 'static, Passed : SystemPassable, $( $generic : Query , )* Return >
         System<Return>
         for FunctionSystem<F, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>
     where for<'l> &'l mut F:
@@ -187,15 +199,24 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
             {
                 func( passed, $( $generic , )* ).await
             }
-            // SAFETY: TODO
-            $( let $generic = unsafe{ QueryAcquireFuture::<$generic>::new(Arc::clone(&world), &mut self.query_states.${index()}) }; )*
-            let ( $( $generic , )* ) = multijoin!( $( $generic , )* );
-            run_inner::< Passed, $( $generic::Item , )* Return >( &mut self.function, passed $( , $generic.unwrap(self.source) )* ).await
+            let out;
+            {
+                // SAFETY: TODO
+                $( let $generic = unsafe{ QueryAcquireFuture::<$generic>::new(Arc::clone(&world), &mut self.query_states.${index()}) }; )*
+                let ( $( $generic , )* ) = multijoin!( $( $generic , )* );
+                out = run_inner::< Passed, $( $generic::Item , )* Return >( &mut self.function, passed $( , $generic.unwrap(self.source) )* ).await;
+            }
+            let mut cmd_queue = world.cmd_queue.write().await;
+            for cmd in cmd_queue.drain(..) { // TODO: Parallelise
+                cmd(Arc::clone(&world)).await;
+            }
+            world.ran_systems.write().await.insert(TypeId::of::<F>());
+            out
         }
     }
 
     $( #[ $meta ] )*
-    unsafe impl< F, Passed : SystemPassable, $( $generic : ReadOnlyQuery , )* Return >
+    unsafe impl< F : 'static, Passed : SystemPassable, $( $generic : ReadOnlyQuery , )* Return >
         ReadOnlySystem<Return>
         for FunctionSystem<F, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>
     where for<'l> &'l mut F:

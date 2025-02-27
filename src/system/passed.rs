@@ -3,8 +3,10 @@
 
 use crate::world::World;
 use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem, In };
+use core::any::TypeId;
 use core::marker::PhantomData;
 use alloc::sync::Arc;
+use alloc::collections::BTreeSet;
 
 
 /// TODO: Doc comment
@@ -35,6 +37,10 @@ where   S         : IntoSystem<Params, Return>,
 {
 
     type System = PassedSystem<Passed, S::System, Return>;
+
+    fn extend_scheduled_system_config_ids(ids : &mut BTreeSet<TypeId>) {
+        S::extend_scheduled_system_config_ids(ids);
+    }
 
     #[track_caller]
     fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {

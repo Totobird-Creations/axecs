@@ -3,8 +3,10 @@
 
 use crate::world::World;
 use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
+use core::any::TypeId;
 use core::marker::PhantomData;
 use alloc::sync::Arc;
+use alloc::collections::BTreeSet;
 
 
 pub struct IntoSeriesSystem<APassed, A, AParams, B, BParams, Return>
@@ -37,6 +39,11 @@ where   A         : IntoSystem<AParams, ()>,
         B::System : System<Return, Passed = ()>
 {
     type System = SeriesSystem<APassed, A::System, B::System, Return>;
+
+    fn extend_scheduled_system_config_ids(ids : &mut BTreeSet<TypeId>) {
+        A::extend_scheduled_system_config_ids(ids);
+        B::extend_scheduled_system_config_ids(ids);
+    }
 
     #[track_caller]
     fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {

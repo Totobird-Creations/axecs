@@ -205,13 +205,6 @@ impl Future for CycleSchedulerFuture {
             fut.as_mut().poll(ctx).is_pending()
         });
 
-        if let Poll::Ready(mut cmd_queue) = self.world.cmd_queue.try_write() {
-            for cmd in cmd_queue.drain(..) {
-                let fut = cmd(Arc::clone(&self.world));
-                self.futures.push(fut);
-            }
-        }
-
         match (self.state) {
 
             CycleSchedulerState::Init => {

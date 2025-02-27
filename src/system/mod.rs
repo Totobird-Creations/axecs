@@ -24,9 +24,11 @@ pub use state::*;
 
 
 use crate::world::World;
+use core::any::TypeId;
 use core::marker::PhantomData;
 use core::sync::atomic::{ AtomicU64, Ordering as AtomicOrdering };
 use alloc::sync::Arc;
+use alloc::collections::BTreeSet;
 
 
 /// TODO: Doc comment
@@ -66,6 +68,9 @@ pub trait IntoSystem<Params, Return> : Sized {
 
     /// TODO: Doc comment
     type System : System<Return>;
+
+    /// TODO: Doc comment
+    fn extend_scheduled_system_config_ids(ids : &mut BTreeSet<TypeId>);
 
     /// TODO: Doc comment
     fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System;

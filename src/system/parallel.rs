@@ -4,9 +4,11 @@
 use crate::world::World;
 use crate::system::{ SystemId, System, ReadOnlySystem, IntoSystem, IntoReadOnlySystem };
 //use crate::util::variadic::variadic_no_unit;
+use core::any::TypeId;
 use core::marker::PhantomData;
 use core::future::join;
 use alloc::sync::Arc;
+use alloc::collections::BTreeSet;
 //use paste::paste;
 
 
@@ -40,6 +42,11 @@ where   A         : IntoSystem<AParams, ()>,
         B::System : System<(), Passed = ()>
 {
     type System = ParallelSystem<A::System, B::System>;
+
+    fn extend_scheduled_system_config_ids(ids : &mut BTreeSet<TypeId>) {
+        A::extend_scheduled_system_config_ids(ids);
+        B::extend_scheduled_system_config_ids(ids);
+    }
 
     #[track_caller]
     fn into_system(self, world : Arc<World>, system_id : Option<SystemId>) -> Self::System {
