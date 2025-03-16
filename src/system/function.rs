@@ -9,6 +9,7 @@ use crate::util::variadic::variadic;
 use core::any::{ TypeId, type_name };
 use core::ops::AsyncFnMut;
 use core::marker::PhantomData;
+use core::mem;
 use alloc::sync::Arc;
 use alloc::collections::BTreeSet;
 
@@ -214,9 +215,14 @@ macro impl_system_for_function_system( $( #[$meta:meta] )* $( $generic:ident ),*
                 let ( $( $generic , )* ) = multijoin!( $( $generic , )* );
                 out = run_inner::< Passed, $( $generic::Item , )* Return >( &mut self.function, passed $( , $generic.unwrap(self.source) )* ).await;
             }
-            let mut cmd_queue = world.cmd_queue.write().await;
-            for cmd in cmd_queue.drain(..) { // TODO: Parallelise
-                cmd(Arc::clone(&world)).await;
+            {
+                let mut cmd_queue = world.cmd_queue.write().await;
+                let     capacity  = cmd_queue.capacity();
+                let     cmds      = mem::replace(&mut*cmd_queue, Vec::with_capacity(capacity));
+                drop(cmd_queue);
+                for cmd in cmds { // TODO: Parallelise
+                    cmd(Arc::clone(&world)).await;
+                }
             }
             world.ran_systems.write().await.insert(TypeId::of::<F>());
             out

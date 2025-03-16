@@ -47,7 +47,10 @@ pub struct World {
     archetypes  : ArchetypeStorage,
 
     /// TODO: Doc comments
-    pub(crate) cmd_queue : RwLock<Vec<Box<dyn (FnOnce(Arc<World>) -> Pin<Box<dyn Future<Output = ()>>>) + Send + Sync>>>,
+    pub(crate) cmd_queue : RwLock<Vec<Box<dyn (FnOnce(Arc<World>) -> Pin<Box<dyn Future<Output = ()>>>) + Send + Sync>>>, // TODO: Move to Commands or FunctionSystem.
+
+    /// TODO: Doc comments
+    pub(crate) deferred_cmd_queue : RwLock<Vec<Box<dyn (FnOnce(Arc<World>) -> Pin<Box<dyn Future<Output = ()>>>) + Send + Sync>>>,
 
     /// TODO: Doc comments
     pub(crate) ran_systems : RwLock<BTreeSet<TypeId>>
@@ -81,12 +84,13 @@ impl World {
     /// creates a new [`World`] with some [`Resource`]s in it to start.
     #[inline]
     pub fn new_with(resources : ResourceStorage) -> Self { Self {
-        is_exiting  : AtomicU8::new(0),
-        exit_status : SyncUnsafeCell::new(MaybeUninit::uninit()),
+        is_exiting         : AtomicU8::new(0),
+        exit_status        : SyncUnsafeCell::new(MaybeUninit::uninit()),
         resources,
-        archetypes  : ArchetypeStorage::new(),
-        cmd_queue   : RwLock::new(Vec::new()),
-        ran_systems : RwLock::new(BTreeSet::new())
+        archetypes         : ArchetypeStorage::new(),
+        cmd_queue          : RwLock::new(Vec::new()),
+        deferred_cmd_queue : RwLock::new(Vec::new()),
+        ran_systems        : RwLock::new(BTreeSet::new())
     } }
 
 

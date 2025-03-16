@@ -12,7 +12,7 @@ use crate::util::rwlock::{RwLock, RwLockWriteGuard};
 use crate::util::sparsevec::SparseVec;
 use core::pin::Pin;
 use core::task::{ Context, Poll };
-use core::mem::MaybeUninit;
+use core::mem::{ self, MaybeUninit };
 use core::cell::UnsafeCell;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -204,6 +204,19 @@ impl Future for CycleSchedulerFuture {
         self.futures.retain(|fut| {
             fut.as_mut().poll(ctx).is_pending()
         });
+
+        {
+            let mut deferred_cmd_queue = self.world.deferred_cmd_queue.try_write();
+            if let Some(cmd_queue) = &mut deferred_cmd_queue {
+                let capacity = cmd_queue.capacity();
+                let cmds     = mem::replace(&mut**cmd_queue, Vec::with_capacity(capacity));
+                drop(deferred_cmd_queue);
+                for cmd in cmds {
+                    let world = Arc::clone(&self.world);
+                    self.futures.push(cmd(world));
+                }
+            }
+        }
 
         match (self.state) {
 

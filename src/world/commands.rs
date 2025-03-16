@@ -94,7 +94,7 @@ impl Commands {
     pub async fn run_system<S : IntoSystem<Params, ()> + 'static, Params>(&self, system : S)
     where <S as IntoSystem<Params, ()>>::System : System<(), Passed = ()>
     {
-        self.world.cmd_queue.write().await.push(Box::new(|world| Box::pin(async {
+        self.world.deferred_cmd_queue.write().await.push(Box::new(|world| Box::pin(async {
             let mut system = system.into_system(Arc::clone(&world), None);
             // SAFETY: TODO
             unsafe{ system.acquire_and_run((), world) }.await;
