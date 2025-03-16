@@ -17,13 +17,13 @@ static CTRLC_PRESSED : AtomicBool = AtomicBool::new(false);
 
 /// TODO: Doc comment
 pub struct CtrlCPlugin {
-    exit_status : Box<dyn Error>
+    exit_status : Box<dyn Error + Send>
 }
 
 impl Default for CtrlCPlugin {
     fn default() -> Self {
         Self {
-            exit_status : "^C".into()
+            exit_status : Box::<dyn Error + Sync + Send>::from("^C")
         }
     }
 }
@@ -31,7 +31,7 @@ impl Default for CtrlCPlugin {
 
 /// TODO: Doc comment
 struct CtrlCStatus {
-    exit_status : Option<Box<dyn Error>>
+    exit_status : Option<Box<dyn Error + Send>>
 }
 
 impl Resource for CtrlCStatus { }
@@ -58,6 +58,6 @@ async fn exit_with_status(
     mut status : Res<&mut CtrlCStatus>
 ) {
     if let Some(exit_status) = status.exit_status.take() {
-        cmds.exit(AppExit::Err(exit_status));
+        cmds.try_exit(AppExit::Err(exit_status));
     }
 }

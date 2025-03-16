@@ -51,7 +51,7 @@ use alloc::vec;
 /// #### Safety
 /// If this trait is not implemented properly, it may return bad data which causes [*undefined behaviour*](reference@behavior-considered-undefined).
 /// Check the safety information for each method.
-pub unsafe trait ComponentBundle {
+pub unsafe trait ComponentBundle : Send {
 
     /// Returns a [`ComponentTypeInfo`] for each [`Component`] type in this bundle.
     ///

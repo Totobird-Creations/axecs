@@ -10,7 +10,7 @@ use core::mem::ManuallyDrop;
 use alloc::sync::Arc;
 
 
-/// A [`RwLock`] which gives up fairness for speed.
+/// TODO: Doc comments.
 pub struct RwLock<T> {
 
     /// The inner data and lock of this [`RwLock`].

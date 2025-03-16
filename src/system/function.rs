@@ -21,9 +21,11 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
     impl< F : 'static, $( $generic : Query , )* Return >
         IntoSystem<( (), $( $generic , )* ), Return>
         for F
-    where for<'l> &'l mut F:
-        (AsyncFnMut( $( $generic , )* ) -> Return) +
-        (AsyncFnMut( $( <$generic as Query>::Item , )* ) -> Return)
+    where
+        F : Send,
+        for<'l> &'l mut F:
+            (AsyncFnMut( $( $generic , )* ) -> Return) +
+            (AsyncFnMut( $( <$generic as Query>::Item , )* ) -> Return)
     {
 
         type System = FunctionSystem<Self, (), ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
@@ -61,9 +63,11 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
     unsafe impl< F : 'static, $( $generic : ReadOnlyQuery , )* Return >
         IntoReadOnlySystem<( (), $( $generic , )* ), Return>
         for F
-    where for<'l> &'l mut F:
-        (AsyncFnMut( $( $generic , )* ) -> Return) +
-        (AsyncFnMut( $( <$generic as Query>::Item , )* ) -> Return)
+    where
+        F : Send,
+        for<'l> &'l mut F:
+            (AsyncFnMut( $( $generic , )* ) -> Return) +
+            (AsyncFnMut( $( <$generic as Query>::Item , )* ) -> Return)
     { }
 
 
@@ -72,9 +76,11 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
     impl< F : 'static, Passed : SystemPassable, $( $generic : Query , )* Return >
         IntoSystem<( Passed, $( $generic , )* ), Return>
         for F
-    where for<'l> &'l mut F:
-        (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
-        (AsyncFnMut( Passed, $( <$generic as Query>::Item , )* ) -> Return)
+    where
+        F : Send,
+        for<'l> &'l mut F:
+            (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
+            (AsyncFnMut( Passed, $( <$generic as Query>::Item , )* ) -> Return)
     {
         type System = FunctionSystem<Self, Passed, ( $( <$generic as Query>::State , )* ), ( $( $generic , )* ), Return>;
 
@@ -111,9 +117,11 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
     unsafe impl< F : 'static, Passed : SystemPassable, $( $generic : ReadOnlyQuery , )* Return >
         IntoReadOnlySystem<( Passed, $( $generic , )* ), Return>
         for F
-    where for<'l> &'l mut F:
-        (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
-        (AsyncFnMut( Passed, $( <$generic as Query>::Item , )* ) -> Return)
+    where
+        F : Send,
+        for<'l> &'l mut F:
+            (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
+            (AsyncFnMut( Passed, $( <$generic as Query>::Item , )* ) -> Return)
     { }
 
 }

@@ -64,7 +64,7 @@ pub unsafe trait ReadOnlySystem<Return> : System<Return> { }
 
 
 /// TODO: Doc comment
-pub trait IntoSystem<Params, Return> : Sized {
+pub trait IntoSystem<Params, Return> : Send + Sized {
 
     /// TODO: Doc comment
     type System : System<Return>;
@@ -94,7 +94,7 @@ pub trait IntoSystem<Params, Return> : Sized {
     }
 
     /// TODO: Doc comment
-    fn map<B, BParams, BReturn>(self, with : B)
+    fn map<B, BReturn>(self, with : B)
         -> IntoMappedSystem<<Self::System as System<Return>>::Passed, Self, Params, Return, B, BReturn>
     where   B            : FnMut(Return) -> BReturn,
             Self::System : System<Return>

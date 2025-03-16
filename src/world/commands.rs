@@ -7,7 +7,7 @@ use crate::resource::Resource;
 use crate::entity::Entity;
 use crate::component::bundle::ComponentBundle;
 use crate::query::{ Query, QueryAcquireResult, QueryValidator };
-use crate::system::{ SystemId, IntoSystem, IntoReadOnlySystem, System, ReadOnlySystem };
+use crate::system::{ SystemId, IntoSystem, System };
 use core::task::Poll;
 use alloc::boxed::Box;
 use alloc::sync::Arc;
@@ -77,7 +77,7 @@ impl Commands {
     }
 
     /// TODO: Doc comments
-    pub async fn spawn_batch<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B> + 'static) {
+    pub async fn spawn_batch<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B> + Send + 'static) {
         self.world.cmd_queue.write().await.push(Box::new(move |world|
             Box::pin(async move { let _ = world.spawn_batch(bundles).await; })
         ))
@@ -91,18 +91,7 @@ impl Commands {
     }
 
     /// TODO: Doc comments
-    pub async fn run_system<S : IntoReadOnlySystem<Params, ()> + 'static, Params>(&self, system : S)
-    where <S as IntoSystem<Params, ()>>::System : System<(), Passed = ()> + ReadOnlySystem<()>
-    {
-        self.world.cmd_queue.write().await.push(Box::new(|world| Box::pin(async {
-            let mut system = system.into_system(Arc::clone(&world), None);
-            // SAFETY: TODO
-            unsafe{ system.acquire_and_run((), world) }.await;
-        })));
-    }
-
-    /// TODO: Doc comments
-    pub async fn run_system_mut<S : IntoSystem<Params, ()> + 'static, Params>(&self, system : S)
+    pub async fn run_system<S : IntoSystem<Params, ()> + 'static, Params>(&self, system : S)
     where <S as IntoSystem<Params, ()>>::System : System<(), Passed = ()>
     {
         self.world.cmd_queue.write().await.push(Box::new(|world| Box::pin(async {
