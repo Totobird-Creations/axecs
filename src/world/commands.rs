@@ -77,7 +77,7 @@ impl Commands {
     }
 
     /// TODO: Doc comments
-    pub async fn spawn_batch<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B> + Send + 'static) {
+    pub async fn spawn_batch<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B> + Send + Sync + 'static) {
         self.world.cmd_queue.write().await.push(Box::new(move |world|
             Box::pin(async move { let _ = world.spawn_batch(bundles).await; })
         ))

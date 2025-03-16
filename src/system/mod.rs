@@ -64,7 +64,7 @@ pub unsafe trait ReadOnlySystem<Return> : System<Return> { }
 
 
 /// TODO: Doc comment
-pub trait IntoSystem<Params, Return> : Send + Sized {
+pub trait IntoSystem<Params, Return> : Send + Sync + Sized {
 
     /// TODO: Doc comment
     type System : System<Return>;

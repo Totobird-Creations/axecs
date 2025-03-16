@@ -13,7 +13,8 @@
     map_try_insert,
     concat_idents,
     arbitrary_self_types,
-    mpmc_channel
+    mpmc_channel,
+    sync_unsafe_cell
 )]
 #![feature(
     assert_matches,

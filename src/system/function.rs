@@ -22,7 +22,7 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         IntoSystem<( (), $( $generic , )* ), Return>
         for F
     where
-        F : Send,
+        F : Send + Sync,
         for<'l> &'l mut F:
             (AsyncFnMut( $( $generic , )* ) -> Return) +
             (AsyncFnMut( $( <$generic as Query>::Item , )* ) -> Return)
@@ -64,7 +64,7 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         IntoReadOnlySystem<( (), $( $generic , )* ), Return>
         for F
     where
-        F : Send,
+        F : Send + Sync,
         for<'l> &'l mut F:
             (AsyncFnMut( $( $generic , )* ) -> Return) +
             (AsyncFnMut( $( <$generic as Query>::Item , )* ) -> Return)
@@ -77,7 +77,7 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         IntoSystem<( Passed, $( $generic , )* ), Return>
         for F
     where
-        F : Send,
+        F : Send + Sync,
         for<'l> &'l mut F:
             (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
             (AsyncFnMut( Passed, $( <$generic as Query>::Item , )* ) -> Return)
@@ -118,7 +118,7 @@ macro impl_into_system_for_f( $( #[$meta:meta] )* $( $generic:ident ),* $(,)? ) 
         IntoReadOnlySystem<( Passed, $( $generic , )* ), Return>
         for F
     where
-        F : Send,
+        F : Send + Sync,
         for<'l> &'l mut F:
             (AsyncFnMut( Passed, $( $generic , )* ) -> Return) +
             (AsyncFnMut( Passed, $( <$generic as Query>::Item , )* ) -> Return)

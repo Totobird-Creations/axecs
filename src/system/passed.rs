@@ -33,7 +33,7 @@ impl<Passed, S, Params, Return>
     for IntoPassedSystem<Passed, S, Params, Return>
 where   S         : IntoSystem<Params, Return>,
         S::System : System<Return, Passed = In<Passed>>,
-        Passed    : Clone + Send
+        Passed    : Clone + Send + Sync
 {
 
     type System = PassedSystem<Passed, S::System, Return>;
@@ -68,7 +68,7 @@ unsafe impl<Passed, S, Params, Return>
     for IntoPassedSystem<Passed, S, Params, Return>
 where   S         : IntoReadOnlySystem<Params, Return>,
         S::System : ReadOnlySystem<Return, Passed = In<Passed>>,
-        Passed    : Clone + Send
+        Passed    : Clone + Send + Sync
 { }
 
 

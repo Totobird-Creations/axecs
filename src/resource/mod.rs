@@ -9,7 +9,7 @@ pub use query::*;
 
 
 /// TODO: Doc comments
-pub trait Resource : Sized + Send { }
+pub trait Resource : Sized + Send + Sync { }
 
 
 /// [`Resource`] wrapping marker.

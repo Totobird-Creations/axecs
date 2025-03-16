@@ -34,7 +34,7 @@ impl<APassed, A, AParams, BPassed, B, Return>
     IntoSystem<(), Return>
     for IntoMappedSystem<APassed, A, AParams, BPassed, B, Return>
 where   A         : IntoSystem<AParams, BPassed>,
-        B         : (FnMut(BPassed) -> Return) + Send,
+        B         : (FnMut(BPassed) -> Return) + Send + Sync,
         A::System : System<BPassed, Passed = APassed>
 {
     type System = MappedSystem<APassed, A::System, BPassed, B, Return>;
@@ -70,7 +70,7 @@ unsafe impl<APassed, A, AParams, BPassed, B, Return>
     IntoReadOnlySystem<(), Return>
     for IntoMappedSystem<APassed, A, AParams, BPassed, B, Return>
 where   A         : IntoReadOnlySystem<AParams, BPassed>,
-        B         : (FnMut(BPassed) -> Return) + Send,
+        B         : (FnMut(BPassed) -> Return) + Send + Sync,
         A::System : ReadOnlySystem<BPassed, Passed = APassed>
 { }
 

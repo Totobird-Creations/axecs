@@ -14,7 +14,7 @@ use crate::system::{ SystemId, IntoSystem, IntoReadOnlySystem, ReadOnlySystem, P
 use crate::app::AppExit;
 use crate::schedule::system::TypeErasedSystem;
 use core::any::TypeId;
-use core::cell::UnsafeCell;
+use core::cell::SyncUnsafeCell;
 use core::mem::MaybeUninit;
 use core::sync::atomic::{ AtomicU8, Ordering };
 use core::pin::Pin;
@@ -38,7 +38,7 @@ pub struct World {
     is_exiting  : AtomicU8,
 
     /// The [`AppExit`] status of the app.
-    exit_status : UnsafeCell<MaybeUninit<AppExit>>,
+    exit_status : SyncUnsafeCell<MaybeUninit<AppExit>>,
 
     /// The [`Resource`]s in this world.
     resources   : ResourceStorage,
@@ -47,7 +47,7 @@ pub struct World {
     archetypes  : ArchetypeStorage,
 
     /// TODO: Doc comments
-    pub(crate) cmd_queue : RwLock<Vec<Box<dyn (FnOnce(Arc<World>) -> Pin<Box<dyn Future<Output = ()>>>) + Send>>>,
+    pub(crate) cmd_queue : RwLock<Vec<Box<dyn (FnOnce(Arc<World>) -> Pin<Box<dyn Future<Output = ()>>>) + Send + Sync>>>,
 
     /// TODO: Doc comments
     pub(crate) ran_systems : RwLock<BTreeSet<TypeId>>
@@ -82,7 +82,7 @@ impl World {
     #[inline]
     pub fn new_with(resources : ResourceStorage) -> Self { Self {
         is_exiting  : AtomicU8::new(0),
-        exit_status : UnsafeCell::new(MaybeUninit::uninit()),
+        exit_status : SyncUnsafeCell::new(MaybeUninit::uninit()),
         resources,
         archetypes  : ArchetypeStorage::new(),
         cmd_queue   : RwLock::new(Vec::new()),

@@ -69,7 +69,7 @@ use core::cmp::Ordering;
 ///     Jump
 /// }
 /// ```
-pub trait Component : Send + Sized { }
+pub trait Component : Send + Sync + Sized { }
 
 
 /// Information about a [`Component`] type, such as [`TypeId`], [`Layout`], and drop function.
