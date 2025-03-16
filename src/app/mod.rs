@@ -243,6 +243,6 @@ pub enum AppExit {
     Ok,
 
     /// The [`App`] experienced an error.
-    Err(Box<dyn Error>)
+    Err(Box<dyn Error + Send + Sync>)
 
 }
