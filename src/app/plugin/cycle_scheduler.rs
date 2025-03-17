@@ -206,11 +206,24 @@ impl Future for CycleSchedulerFuture {
         });
 
         {
-            let mut deferred_cmd_queue = self.world.deferred_cmd_queue.try_write();
-            if let Some(cmd_queue) = &mut deferred_cmd_queue {
+            let mut world_cmd_queue = self.world.cmd_queue.try_write();
+            if let Some(cmd_queue) = &mut world_cmd_queue {
                 let capacity = cmd_queue.capacity();
                 let cmds     = mem::replace(&mut**cmd_queue, Vec::with_capacity(capacity));
-                drop(deferred_cmd_queue);
+                drop(world_cmd_queue);
+                for cmd in cmds {
+                    let world = Arc::clone(&self.world);
+                    self.futures.push(cmd(world));
+                }
+            }
+        }
+
+        {
+            let mut world_cmd_queue = self.world.deferred_cmd_queue.try_write();
+            if let Some(cmd_queue) = &mut world_cmd_queue {
+                let capacity = cmd_queue.capacity();
+                let cmds     = mem::replace(&mut**cmd_queue, Vec::with_capacity(capacity));
+                drop(world_cmd_queue);
                 for cmd in cmds {
                     let world = Arc::clone(&self.world);
                     self.futures.push(cmd(world));
