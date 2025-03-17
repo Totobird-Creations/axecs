@@ -46,14 +46,12 @@ unsafe impl<'l, R : Resource + 'static> Query for Res<&'l R> {
         match (world.resources().try_read_raw()) {
             Poll::Ready(inner) => {
                 let type_id = TypeId::of::<R>();
-                match (inner.resources().find(|resource| resource.0 == type_id)
-                    .and_then(|(_, lock)| match (lock.try_read()) {
-                        Poll::Ready(out) => Some(out),
-                        Poll::Pending    => None
-                    })
-                ) {
-                    Some(out) => Poll::Ready(QueryAcquireResult::Ready(Res { guard : out })),
-                    None      => Poll::Ready(QueryAcquireResult::DoesNotExist {
+                match (inner.resources().find(|resource| resource.0 == type_id)) {
+                    Some((_, lock)) => match (lock.try_read()) {
+                        Poll::Ready(out) => Poll::Ready(QueryAcquireResult::Ready(Res { guard : out })),
+                        Poll::Pending    => Poll::Pending
+                    },
+                    None => Poll::Ready(QueryAcquireResult::DoesNotExist {
                         #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
                         name : type_name::<resource::marker::Resource<R>>()
                     })
@@ -101,14 +99,12 @@ unsafe impl<'l, R : Resource + 'static> Query for Res<&'l mut R> {
         match (world.resources().try_read_raw()) {
             Poll::Ready(inner) => {
                 let type_id = TypeId::of::<R>();
-                match (inner.resources().find(|resource| resource.0 == type_id)
-                    .and_then(|(_, lock)| match (lock.try_write()) {
-                        Poll::Ready(out) => Some(out),
-                        Poll::Pending    => None
-                    })
-                ) {
-                    Some(out) => Poll::Ready(QueryAcquireResult::Ready(Res { guard : out })),
-                    None      => Poll::Ready(QueryAcquireResult::DoesNotExist {
+                match (inner.resources().find(|resource| resource.0 == type_id)) {
+                    Some((_, lock)) => match (lock.try_write()) {
+                        Poll::Ready(out) => Poll::Ready(QueryAcquireResult::Ready(Res { guard : out })),
+                        Poll::Pending    => Poll::Pending
+                    },
+                    None => Poll::Ready(QueryAcquireResult::DoesNotExist {
                         #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
                         name : type_name::<resource::marker::Resource<R>>()
                     })
