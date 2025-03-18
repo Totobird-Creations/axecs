@@ -5,11 +5,11 @@ use crate::world::World;
 use crate::resource::Resource;
 use crate::system::SystemId;
 use crate::query::{ Query, QueryAcquireResult, QueryValidator };
-use crate::util::rwlock::RwLock;
 use core::task::Poll;
 use alloc::sync::Arc;
-use std::sync::mpmc;
+use std::sync::mpsc;
 use async_std::task::block_on;
+use async_std::sync::RwLock;
 
 
 /// TODO: Doc comment
@@ -19,7 +19,7 @@ pub trait Event : Clone { }
 /// TODO: Doc comment
 struct EventQueue<E : Event> {
     /// TODO: Doc comment
-    events : Arc<RwLock<Vec<mpmc::Sender<E>>>>
+    events : Arc<RwLock<Vec<mpsc::Sender<E>>>>
 }
 
 unsafe impl<E : Event> Sync for EventQueue<E> { }
@@ -31,7 +31,7 @@ impl<E : Event> Resource for EventQueue<E> { }
 /// TODO: Doc comment
 #[derive(Clone)]
 pub struct EventWriter<E : Event> {
-    events : Arc<RwLock<Vec<mpmc::Sender<E>>>>
+    events : Arc<RwLock<Vec<mpsc::Sender<E>>>>
 }
 
 unsafe impl<E : Event> Sync for EventWriter<E> { }
@@ -39,7 +39,7 @@ unsafe impl<E : Event> Send for EventWriter<E> { }
 
 unsafe impl<E : Event + 'static> Query for EventWriter<E> {
     type Item  = EventWriter<E>;
-    type State = Arc<RwLock<Vec<mpmc::Sender<E>>>>;
+    type State = Arc<RwLock<Vec<mpsc::Sender<E>>>>;
 
     fn init_state(world : Arc<World>, _system_id : Option<SystemId>) -> Self::State {
         Arc::clone(&block_on(world.get_resource_mut_or_insert::<EventQueue<E>>(|| {
@@ -80,7 +80,7 @@ impl<E : Event> EventWriter<E> {
 /// TODO: Doc comment
 pub struct EventReader<E : Event> {
     /// TODO: Doc comment
-    events : mpmc::Receiver<E>
+    events : Arc<mpsc::Receiver<E>>
 }
 
 unsafe impl<E : Event> Sync for EventReader<E> { }
@@ -88,21 +88,21 @@ unsafe impl<E : Event> Send for EventReader<E> { }
 
 unsafe impl<E : Event + 'static> Query for EventReader<E> {
     type Item  = EventReader<E>;
-    type State = mpmc::Receiver<E>;
+    type State = Arc<mpsc::Receiver<E>>;
 
     fn init_state(world : Arc<World>, _system_id : Option<SystemId>) -> Self::State {
         block_on(async {
             let resource = world.get_resource_mut_or_insert::<EventQueue<E>>(||
                 EventQueue { events : Arc::new(RwLock::new(Vec::new())) }
             ).await;
-            let (tx, rx) = mpmc::channel();
+            let (tx, rx) = mpsc::channel();
             resource.events.write().await.push(tx);
-            rx
+            Arc::new(rx)
         })
     }
 
     unsafe fn acquire(_world : Arc<World>, state : &mut Self::State) -> Poll<QueryAcquireResult<Self::Item>> {
-        Poll::Ready(QueryAcquireResult::Ready(EventReader { events : state.clone() }))
+        Poll::Ready(QueryAcquireResult::Ready(EventReader { events : Arc::clone(state) }))
     }
 
     fn validate() -> QueryValidator {
@@ -113,12 +113,12 @@ unsafe impl<E : Event + 'static> Query for EventReader<E> {
 impl<E : Event> EventReader<E> {
 
     /// TODO: Doc comment
-    pub fn read_blocking(&self) -> Result<E, mpmc::RecvError> {
+    pub fn read_blocking(&self) -> Result<E, mpsc::RecvError> {
         self.events.recv()
     }
 
     /// TODO: Doc comment
-    pub fn try_read(&self) -> Result<E, mpmc::TryRecvError> {
+    pub fn try_read(&self) -> Result<E, mpsc::TryRecvError> {
         self.events.try_recv()
     }
 
