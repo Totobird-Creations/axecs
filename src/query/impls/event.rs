@@ -52,7 +52,7 @@ unsafe impl<E : Event + 'static> Query for EventWriter<E> {
     }
 
     fn validate() -> QueryValidator {
-        QueryValidator::of_mutable::<marker::Event<E>>()
+        QueryValidator::empty()
     }
 }
 
@@ -106,7 +106,7 @@ unsafe impl<E : Event + 'static> Query for EventReader<E> {
     }
 
     fn validate() -> QueryValidator {
-        QueryValidator::of_mutable::<marker::Event<E>>()
+        QueryValidator::empty()
     }
 }
 
@@ -128,16 +128,5 @@ impl<E : Event> Iterator for EventReader<E> {
     type Item = E;
     fn next(&mut self) -> Option<Self::Item> {
         self.try_read().ok()
-    }
-}
-
-
-/// [`Event`] wrapping marker.
-pub(crate) mod marker {
-    use core::marker::PhantomData;
-    /// Used in error messages and [`TypeId`](::core::any::TypeId) comparisons to indicate that a type is a [`Event`](super::Event).
-    pub(super) struct Event<E : super::Event> {
-        /// [`PhantomData`] on `E`.
-        marker : PhantomData<E>
     }
 }
