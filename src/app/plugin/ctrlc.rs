@@ -30,8 +30,14 @@ impl Default for CtrlCPlugin {
 
 
 /// TODO: Doc comment
-struct CtrlCStatus {
+pub struct CtrlCStatus {
     exit_status : Option<Box<dyn Error + Send + Sync>>
+}
+
+impl CtrlCStatus {
+    pub fn trigger(&self) {
+        CTRLC_PRESSED.store(true, Ordering::Relaxed);
+    }
 }
 
 impl Resource for CtrlCStatus { }

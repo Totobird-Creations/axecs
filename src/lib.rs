@@ -148,7 +148,7 @@ pub mod prelude {
     pub use crate::query::{ EventReader, EventWriter };
 
     #[doc(inline)]
-    pub use crate::system::{ IntoSystem, IntoSystemPassable, In };
+    pub use crate::system::{ IntoSystem, IntoSystemPassable, IntoUnitSystem, In };
 
     #[doc(inline)]
     pub use crate::schedule::label::{ Always, PreStartup, Startup, Cycle, Shutdown, PostShutdown };

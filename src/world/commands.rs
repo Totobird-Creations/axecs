@@ -77,10 +77,20 @@ impl Commands {
     }
 
     /// TODO: Doc comments
+    pub async unsafe fn spawn_now<B : ComponentBundle + 'static>(&self, bundle : B) -> Entity { // TODO: Get rid of this when spawn reserves space.
+        self.world.spawn(bundle).await
+    }
+
+    /// TODO: Doc comments
     pub async fn spawn_batch<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B> + Send + Sync + 'static) {
         self.world.cmd_queue.write().await.push(Box::new(move |world|
             Box::pin(async move { let _ = world.spawn_batch(bundles).await; })
         ))
+    }
+
+    /// TODO: Doc comments
+    pub async unsafe fn spawn_batch_now<B : ComponentBundle + 'static>(&self, bundles : impl IntoIterator<Item = B> + Send + Sync + 'static) -> impl Iterator<Item = Entity> { // TODO: Get rid of this when spawn reserves space.
+        self.world.spawn_batch(bundles).await
     }
 
     /// TODO: Doc comments

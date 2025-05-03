@@ -89,9 +89,9 @@ impl<T> QueryAcquireResult<T> {
             QueryAcquireResult::Ready(out) => out,
 
             #[cfg(any(debug_assertions, feature = "keep_debug_names"))]
-            QueryAcquireResult::DoesNotExist { name } => { panic!("{} requested non-existant {}", source, unsafe{ UnqualifiedTypeName::from_unchecked(name) }) }
+            QueryAcquireResult::DoesNotExist { name } => { panic!("{} requested non-existent {}", source, unsafe{ UnqualifiedTypeName::from_unchecked(name) }) }
             #[cfg(not(any(debug_assertions, feature = "keep_debug_names")))]
-            QueryAcquireResult::DoesNotExist { } => { panic!("{} requested non-existant item", source) }
+            QueryAcquireResult::DoesNotExist { } => { panic!("{} requested non-existent item", source) }
 
         }
     }

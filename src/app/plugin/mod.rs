@@ -5,7 +5,7 @@ mod cycle_scheduler;
 pub use cycle_scheduler::CycleSchedulerPlugin;
 
 mod ctrlc;
-pub use ctrlc::CtrlCPlugin;
+pub use ctrlc::{ CtrlCPlugin, CtrlCStatus };
 
 
 use crate::app::App;
